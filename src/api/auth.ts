@@ -2,7 +2,6 @@ import { PrismaClient } from "@prisma/client";
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { token } from "morgan";
 
 const router = express.Router();
 const prisma = new PrismaClient();
