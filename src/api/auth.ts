@@ -3,7 +3,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
-import { removeListener } from "process";
+import { sendEmail } from "../utils/mailer";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -21,6 +21,14 @@ router.post("/signup", async (req, res) => {
       },
     });
 
+    const emailVerification = await prisma.emailVerification.findUnique({
+      where: { email },
+    });
+
+    if (!emailVerification || !emailVerification.verified) {
+      return res.status(403).json({ message: "Email not verified" });
+    }
+
     if (existingUser) {
       return res
         .status(409)
@@ -35,6 +43,7 @@ router.post("/signup", async (req, res) => {
         email,
         password: hashedPwd,
         role: "USER", // Default role for new users
+        isVerified: true,
       },
     });
 
@@ -44,6 +53,55 @@ router.post("/signup", async (req, res) => {
       email: newUser.email,
       createdAt: newUser.createdAt,
     });
+  } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get("/verify-email", async (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    return res.status(400).json({ message: "Token is required" });
+  }
+
+  try {
+    const { email } = jwt.verify(token as string, process.env.JWT_SECRET!) as {
+      email: string;
+    };
+
+    await prisma.emailVerification.update({
+      where: { email },
+      data: { verified: true },
+    });
+    res.redirect(
+      `${process.env.FRONTEND_URL}/signup/email-verified?email=${email}`
+    );
+  } catch (err) {
+    return res.status(400).json({ message: "Invalid or expired token" });
+  }
+});
+
+router.post("/request-verify", async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  try {
+    const token = jwt.sign({ email }, process.env.JWT_SECRET!, {
+      expiresIn: "15m",
+    });
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+
+    await sendEmail(email, verifyUrl);
+
+    await prisma.emailVerification.upsert({
+      where: { email },
+      update: { verified: false },
+      create: { email, verified: false },
+    });
+
+    res.json({ message: "Verification email sent successfully" });
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
   }
