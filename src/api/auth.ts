@@ -44,3 +44,21 @@ router.post("/signup", async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 });
+
+router.delete("/:id", async (req, res) => {
+  const { id } = req.query;
+  if (!id) {
+    return res.status(403).json({ message: "User ID is required" });
+  }
+
+  try {
+    await prisma.user.delete({
+      where: {
+        id: Number(id),
+      },
+    });
+    return res.status(200).json({ message: "User deleted successfully" });
+  } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
