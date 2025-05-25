@@ -50,6 +50,29 @@ router.post("/signup", async (req, res) => {
   }
 });
 
+router.get("/verify-email", async (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    return res.status(400).json({ message: "Token is required" });
+  }
+
+  try {
+    const { email } = jwt.verify(token as string, process.env.JWT_SECRET!) as {
+      email: string;
+    };
+
+    await prisma.emailVerification.update({
+      where: { email },
+      data: { verified: true },
+    });
+    res.redirect(
+      `${process.env.FRONTEND_URL}/signup/email-verified?email=${email}`
+    );
+  } catch (err) {
+    return res.status(400).json({ message: "Invalid or expired token" });
+  }
+});
+
 router.post("/request-verify", async (req, res) => {
   const { email } = req.body;
   if (!email) {
@@ -66,7 +89,7 @@ router.post("/request-verify", async (req, res) => {
 
     await prisma.emailVerification.upsert({
       where: { email },
-      update: { verifide: false },
+      update: { verified: false },
       create: { email, verified: false },
     });
 
