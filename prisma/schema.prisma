@@ -26,7 +26,7 @@ model User {
 
 model EmailVerification {
   id        Int      @id @default(autoincrement())
-  email     String
+  email     String   @unique
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
 }
