@@ -21,6 +21,14 @@ router.post("/signup", async (req, res) => {
       },
     });
 
+    const emailVerification = await prisma.emailVerification.findUnique({
+      where: { email },
+    });
+
+    if (!emailVerification || !emailVerification.verified) {
+      return res.status(403).json({ message: "Email not verified" });
+    }
+
     if (existingUser) {
       return res
         .status(409)
