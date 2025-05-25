@@ -1,23 +1,31 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
-export const authToken = ((req:Request,res:Response,next:NextFunction) => {
-    const authHeader = req.headers.authorization;
+export interface AuthRequest extends Request {
+  user?: { userId: number };
+}
 
-    if (!authHeader?.startsWith("Bearer ")) {
-        res.status(401).json({ message: "Unauthorized" });
-        return
-    }
+export const authToken = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers.authorization;
 
-    const token = authHeader.split(" ")[1];
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
-            userId : number
-        };
-        (req as any).user = {userId : decoded.userId};
-        next();
-    } catch (err) {
-        return res.status(401).json({ message: "Invalid token" });
-    }
-})
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+      userId: number;
+    };
+    req.user = { userId: decoded.userId };
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
