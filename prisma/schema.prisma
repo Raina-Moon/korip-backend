@@ -20,4 +20,5 @@ model User {
   nickname  String   @unique
   password  String
   createdAt DateTime @default(now())
+  role      String   @default("USER")
 }
