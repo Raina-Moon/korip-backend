@@ -3,6 +3,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
+import { sendEmail } from "../utils/mailer";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -44,6 +45,32 @@ router.post("/signup", async (req, res) => {
       email: newUser.email,
       createdAt: newUser.createdAt,
     });
+  } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/request-verify", async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  try {
+    const token = jwt.sign({ email }, process.env.JWT_SECRET!, {
+      expiresIn: "15m",
+    });
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+
+    await sendEmail(email, verifyUrl);
+
+    await prisma.emailVerification.upsert({
+      where: { email },
+      update: { verifide: false },
+      create: { email, verified: false },
+    });
+
+    res.json({ message: "Verification email sent successfully" });
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
   }
