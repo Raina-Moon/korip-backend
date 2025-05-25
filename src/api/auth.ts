@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import express from "express";
+import bcrypt from "bcrypt";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -10,13 +11,36 @@ router.post("/signup", async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  const user = await prisma.user.create({
-    data: {
-      nickname,
-      email,
-      password,
-    },
-  });
+  try {
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ nickname }, { email }],
+      },
+    });
 
-  res.status(201).json(user);
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ message: "User with this nickname or email already exists" });
+    }
+
+    const hashedPwd = await bcrypt.hash(password, 10);
+
+    const newUser = await prisma.user.create({
+      data: {
+        nickname,
+        email,
+        password: hashedPwd,
+      },
+    });
+
+    return res.status(201).json({
+      id: newUser.id,
+      nickname: newUser.nickname,
+      email: newUser.email,
+      createdAt: newUser.createdAt,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
 });
