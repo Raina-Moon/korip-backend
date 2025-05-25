@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -46,9 +47,11 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authToken, async (req: AuthRequest, res) => {
   const { id } = req.params;
-  if (!id) {
+  const userFromToken = req.user!.userId;
+
+  if (userFromToken !== Number(id)) {
     return res.status(403).json({ message: "User ID is required" });
   }
 
