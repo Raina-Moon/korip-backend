@@ -15,10 +15,18 @@ datasource db {
 }
 
 model User {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  nickname   String   @unique
+  password   String
+  createdAt  DateTime @default(now())
+  role       String   @default("USER")
+  isVerified Boolean  @default(false)
+}
+
+model EmailVerification {
   id        Int      @id @default(autoincrement())
-  email     String   @unique
-  nickname  String   @unique
-  password  String
+  email     String
+  verified  Boolean  @default(false)
   createdAt DateTime @default(now())
-  role      String   @default("USER")
 }
