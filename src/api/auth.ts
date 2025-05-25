@@ -46,7 +46,7 @@ router.post("/signup", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const { id } = req.query;
+  const { id } = req.params;
   if (!id) {
     return res.status(403).json({ message: "User ID is required" });
   }
