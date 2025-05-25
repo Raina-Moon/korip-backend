@@ -3,7 +3,6 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
-import { removeListener } from "process";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -35,6 +34,7 @@ router.post("/signup", async (req, res) => {
         email,
         password: hashedPwd,
         role: "USER", // Default role for new users
+        isVerified: true,
       },
     });
 
