@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import express from "express";
 import { generateResetCode } from "../utils/generateResetCode";
 import { sendEmail } from "../utils/mailer";
+import bcrypt from "bcrypt";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -30,6 +31,51 @@ router.post("/", async (req, res) => {
 
     await sendEmail({ email, type: "reset-password", content: code });
     return res.status(200).json({ message: "Reset code sent to your email" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/verify", async (req, res) => {
+  const { email, code } = req.body();
+
+  try {
+    const data = await prisma.passwordResetCode.findFirst({
+      where: {
+        email,
+        code,
+        expiredAt: {
+          gte: new Date(),
+        },
+      },
+    });
+    if (!data) {
+      return res.status(400).json({ message: "Invalid or expired reset code" });
+    }
+
+    return res.status(200).json({ message: "Reset code is valid" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/update", async (req, res) => {
+  const { email, newPassword } = req.body();
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Internal server error" });
