@@ -17,10 +17,12 @@ model User {
   id         Int      @id @default(autoincrement())
   email      String   @unique
   nickname   String   @unique
-  password   String
+  password   String?
   createdAt  DateTime @default(now())
   role       String   @default("USER")
   isVerified Boolean  @default(false)
+  provider   String?
+  socialId   String?
 }
 
 model EmailVerification {
