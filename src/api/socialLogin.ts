@@ -23,7 +23,6 @@ router.post("/", async (req, res) => {
 
   try {
     const decode = jwtDecode<JwtPayload>(accessToken);
-    console.log("Request received:", { provider, accessToken });
 
     const { email, name, sub } = decode;
 
