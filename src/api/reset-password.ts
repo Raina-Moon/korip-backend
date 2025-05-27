@@ -8,7 +8,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 router.post("/", async (req, res) => {
-  const { email } = req.body();
+  const { email } = req.body;
 
   try {
     const user = await prisma.user.findUnique({
@@ -38,7 +38,7 @@ router.post("/", async (req, res) => {
 });
 
 router.post("/verify", async (req, res) => {
-  const { email, code } = req.body();
+  const { email, code } = req.body;
 
   try {
     const data = await prisma.passwordResetCode.findFirst({
@@ -62,7 +62,7 @@ router.post("/verify", async (req, res) => {
 });
 
 router.post("/update", async (req, res) => {
-  const { email, newPassword } = req.body();
+  const { email, newPassword } = req.body;
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });
