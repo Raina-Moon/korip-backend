@@ -23,7 +23,7 @@ router.post("/", async (req, res) => {
     await prisma.passwordResetCode.create({
       data: {
         email,
-        code: code,
+        code,
         expiredAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     });
