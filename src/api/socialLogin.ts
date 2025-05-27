@@ -1,6 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import express from "express";
+import { jwtDecode } from "jwt-decode";
+
+interface JwtPayload {
+    email: string;
+    name?: string;
+    sub: string;
+}
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -15,15 +22,10 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    const googleRes = await axios.get(
-      "https://www.googleapis.com/oauth2/v3/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    const { email, name, sub } = googleRes.data;
+    const decode = jwtDecode<JwtPayload>(accessToken);
+    console.log("Request received:", { provider, accessToken });
+
+    const { email, name, sub } = decode;
 
     let user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
