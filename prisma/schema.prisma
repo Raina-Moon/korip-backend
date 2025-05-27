@@ -31,3 +31,11 @@ model EmailVerification {
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+model PasswordResetCode {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  createdAt DateTime @default(now())
+  expiredAt DateTime
+}

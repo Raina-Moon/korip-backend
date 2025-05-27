@@ -8,18 +8,31 @@ const mailer = nodemailer.createTransport({
   },
 });
 
-export const sendEmail = async (email: string, verifyUrl: string) => {
-  const html = `
-    <p>Click the button below to verify your email:</p>
-    <a href="${verifyUrl}" style="padding:10px;background:#4CAF50;color:white;text-decoration:none;">
-      Verify Email
-    </a>
-    `;
+interface SendEmailOptions {
+  email: string;
+  type: "reset-password" | "verify-email";
+  content: string;
+}
+
+export const sendEmail = async ({ email, type, content }: SendEmailOptions) => {
+  let subject = "";
+  let html = "";
+  if (type === "reset-password") {
+    subject = "Password Reset Request";
+    html = `<p>You requested a password reset. Here's your password reset code:</p>
+    <h2>${content}</h2>
+    <p>This code will expire in 10 minutes.</p>`;
+  } else if (type === "verify-email") {
+    subject = "Email Verification";
+    html = `<p>Thank you for registering. Please verify your email address by clicking the link below:</p>
+    <a href="${content}">Verify Email</a>
+    <p>If you did not register, please ignore this email.</p>`;
+  }
 
   return mailer.sendMail({
     from: process.env.EMAIL_USER,
     to: email,
-    subject: "Email Verification",
-    html: html,
+    subject,
+    html,
   });
 };

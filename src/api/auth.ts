@@ -93,7 +93,7 @@ router.post("/request-verify", async (req, res) => {
     });
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
 
-    await sendEmail(email, verifyUrl);
+    await sendEmail({ email, type: "verify-email", content: verifyUrl });
 
     await prisma.emailVerification.upsert({
       where: { email },
