@@ -171,7 +171,7 @@ router.post("/login", async (req, res) => {
       sameSite: "strict",
       path: "/auth/refresh",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    })
+    });
     return res.status(200).json({
       token: accessToken,
       user: {
@@ -201,6 +201,19 @@ router.post("/refresh", async (req, res) => {
     return res.status(200).json({ accessToken: newAccessToken });
   } catch (err) {
     return res.status(403).json({ message: "Invalid refresh token" });
+  }
+});
+
+router.post("/logout", (req, res) => {
+  try {
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 
