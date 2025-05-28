@@ -165,9 +165,15 @@ router.post("/login", async (req, res) => {
 
     const refreshToken = generateRefreshToken({ userId: user.id });
 
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/auth/refresh",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    })
     return res.status(200).json({
       token: accessToken,
-      refreshToken,
       user: {
         id: user.id,
         email: user.email,
