@@ -4,6 +4,11 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { sendEmail } from "../utils/mailer";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -153,14 +158,16 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "7d" }
-    );
+    const accessToken = generateAccessToken({
+      userId: user.id,
+      role: user.role,
+    });
+
+    const refreshToken = generateRefreshToken({ userId: user.id });
 
     return res.status(200).json({
-      token,
+      token: accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -169,6 +176,25 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/refresh", async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({ message: "Refresh token is required" });
+  }
+
+  try {
+    const decoded = verifyRefreshToken(refreshToken) as { userId: number };
+    const newAccessToken = generateAccessToken({
+      userId: decoded.userId,
+      role: "USER",
+    });
+    return res.status(200).json({ accessToken: newAccessToken });
+  } catch (err) {
+    return res.status(403).json({ message: "Invalid refresh token" });
   }
 });
 
