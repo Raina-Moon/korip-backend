@@ -10,21 +10,24 @@ export const fetchHotspringData = async (lat: number, lng: number) => {
     key: process.env.VWORLD_API_KEY,
     data: "LT_C_UJ401",
     domain: process.env.VWORLD_DOMAIN || "http://localhost:3000",
-    format: "json",
-    crs: "EPSG:4326",
+    format: "xml",
+    errorformat: "xml",
     size: 10,
     page: 1,
     geometry: true,
     attribute: true,
-    buffer: 0,
     columns: "uname,dnum,dyear,sido_name,sigg_name,ag_geom",
+    crs: "EPSG:4326",
     geomFilter: `POINT(${lng} ${lat})`,
     attrFilter: "uname:LIKE:온천공보호구역",
   };
 
   try {
     const response = await axios.get(url, { params });
-    console.log("Response from VWorld API:", response.data);
+    console.log(
+      "Response from VWorld API:",
+      JSON.stringify(response.data, null, 2)
+    );
     const features =
       response.data?.response?.result?.featureCollection?.features;
     if (features) {
