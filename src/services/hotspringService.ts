@@ -17,7 +17,7 @@ export const fetchHotspringData = async () => {
     page: 1,
     geometry: true,
     attribute: true,
-    columns: "uname,dnum,dyear,sido_name,sigg_name,ag_geom",
+    columns: "uname,dnum,dyear,sido_name,sigg_name,remark",
     crs: "EPSG:4326",
     geomFilter: "BOX(123.1,33.0,131.9,38.7)",
     attrFilter: "uname:LIKE:온천공보호구역",
@@ -39,6 +39,7 @@ export const fetchHotspringData = async () => {
         dyear: item.properties?.dyear,
         sido_name: item.properties?.sido_name,
         sigg_name: item.properties?.sigg_name,
+        remark: item.properties?.remark,
       },
       geometry: item.geometry,
     }));
