@@ -25,6 +25,7 @@ export const fetchHotspringData = async (sido?: string) => {
 
   try {
     const response = await axios.get(url, { params });
+    console.log("Response from VWorld API:", response.data);
     const features =
       response.data?.response?.result?.featureCollection?.features;
     if (!features) {
