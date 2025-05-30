@@ -4,12 +4,10 @@ import { fetchHotspringData } from "../services/hotspringService";
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  const lat = parseFloat(req.query.lat as string);
-  const lng = parseFloat(req.query.lng as string);
-  console.log("Received coordinates:", lat, lng);
+  
 
   try {
-    const data = await fetchHotspringData(lat, lng);
+    const data = await fetchHotspringData();
     res.json(data);
   } catch (err) {
     console.error("Error fetching hotspring data:", err);
