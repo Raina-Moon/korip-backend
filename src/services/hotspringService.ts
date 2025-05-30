@@ -1,6 +1,6 @@
 import axios from "axios"
 
-export const fetchHotspringData = async () => {
+export const fetchHotspringData = async (sido?:string) => {
     const url =  "https://api.vworld.kr/req/data"
 
     const params: any = {
@@ -19,6 +19,10 @@ export const fetchHotspringData = async () => {
         buffer : 0  
     }
 
+    if (sido) {
+        params.attrFilter = `sido_name:=:${sido}`
+    }
+    
     try {
         const response = await  axios.get(url, {params})
         if (response.data.response && response.data.response.result) {
