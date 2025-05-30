@@ -57,6 +57,7 @@ router.post("/signup", async (req, res) => {
       nickname: newUser.nickname,
       email: newUser.email,
       createdAt: newUser.createdAt,
+      role:newUser.role,
     });
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
