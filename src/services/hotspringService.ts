@@ -1,4 +1,5 @@
 import axios from "axios";
+import { parseStringPromise } from "xml2js";
 
 export const fetchHotspringData = async (lat: number, lng: number) => {
   const url = "https://api.vworld.kr/req/data";
@@ -24,16 +25,33 @@ export const fetchHotspringData = async (lat: number, lng: number) => {
 
   try {
     const response = await axios.get(url, { params });
-    console.log(
-      "Response from VWorld API:",
-      JSON.stringify(response.data, null, 2)
-    );
-    const features =
-      response.data?.response?.result?.featureCollection?.features;
-    if (features) {
-      return features;
+    const json = await parseStringPromise(response.data);
+    console.log("Parsed XML to JSON:", JSON.stringify(json, null, 2));
+
+    const status = json?.response?.status?.[0];
+
+    if (status !== "OK") {
+      throw new Error(`Error fetching data: ${status}`);
+    }
+
+    const featureMembers =
+        json?.response?.result?.[0]?.["wfs:FeatureCollection"]?.[0]?.["gml:featureMember"];
+
+    if (featureMembers) {
+      return featureMembers.map((item:any) => {
+        const raw = item["LT_C_UJ401"]?.[0];
+        return {
+          properties: {
+            uname: raw?.uname?.[0],
+            dnum: raw?.dnum?.[0],
+            dyear: raw?.dyear?.[0],
+            sido_name: raw?.sido_name?.[0],
+            sigg_name: raw?.sigg_name?.[0],
+          },
+        };
+      });
     } else {
-      throw new Error("Invalid response structure");
+      throw new Error("No featureMember data found");
     }
   } catch (error) {
     console.error("Error fetching hotspring data:", error);
