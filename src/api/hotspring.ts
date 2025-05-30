@@ -5,6 +5,7 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
   const { sido } = req.query;
+  console.log("Received request for hotspring data with sido:", sido);
 
   try {
     const data = await fetchHotspringData(sido as string);
