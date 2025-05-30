@@ -27,7 +27,7 @@ export const fetchHotspringData = async (lat: number, lng: number) => {
     console.log("Response from VWorld API:", response.data);
     const features =
       response.data?.response?.result?.featureCollection?.features;
-    if (!features) {
+    if (features) {
       return features;
     } else {
       throw new Error("Invalid response structure");
