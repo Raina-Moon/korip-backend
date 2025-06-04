@@ -102,8 +102,10 @@ router.delete("/:id", async (req, res) => {
 });
 
 router.get("/", async (_req, res) => {
+  const { lodgeId } = _req.query;
   try {
     const roomTypes = await prisma.roomType.findMany({
+      where: lodgeId ? { lodgeId: Number(lodgeId) } : {},
       include: {
         lodge: {
           select: {
