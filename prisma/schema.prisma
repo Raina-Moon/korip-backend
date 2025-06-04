@@ -41,8 +41,8 @@ model EmailVerification {
   userId    Int
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
-  
-  user     User     @relation(fields: [userId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model PasswordResetCode {
@@ -84,6 +84,7 @@ model HotSpringLodgeReview {
   rating    Int
   comment   String?
   createdAt DateTime @default(now())
+  isHidden  Boolean  @default(false)
 
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
   user  User           @relation(fields: [userId], references: [id])
@@ -127,14 +128,14 @@ enum ReservationStatus {
 }
 
 model Reservation {
-  id          Int      @id @default(autoincrement())
-  lodgeId     Int
-  userId      Int
-  checkIn     DateTime
-  checkOut    DateTime
-  adults      Int
-  children    Int
-  roomCount   Int
+  id        Int      @id @default(autoincrement())
+  lodgeId   Int
+  userId    Int
+  checkIn   DateTime
+  checkOut  DateTime
+  adults    Int
+  children  Int
+  roomCount Int
 
   createdAt DateTime          @default(now())
   status    ReservationStatus @default(CONFIRMED)
@@ -154,7 +155,7 @@ enum PriceType {
 }
 
 model RoomPricing {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   roomTypeId Int
   date       DateTime
   price      Int
