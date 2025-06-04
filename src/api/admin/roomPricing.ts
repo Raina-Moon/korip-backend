@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient,PriceType } from "@prisma/client";
 import express from "express";
 
 const router = express.Router();
@@ -50,13 +50,15 @@ router.patch("/:id", async (req, res) => {
     if (!existingPrice) {
       return res.status(404).json({ message: "Room pricing not found" });
     }
+
+    const data: { date?: Date; price?: number; priceType?: PriceType } = {};
+    if (date) data.date = new Date(date);
+    if (price) data.price = price;
+    if (priceType) data.priceType = priceType;
+
     const updatedPrice = await prisma.roomPricing.update({
       where: { id: Number(id) },
-      data: {
-        date: new Date(date),
-        price,
-        priceType,
-      },
+      data,
     });
     res
       .status(200)
@@ -85,3 +87,5 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
+export default router;
