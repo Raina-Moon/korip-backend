@@ -135,7 +135,6 @@ model Reservation {
   adults      Int
   children    Int
   roomCount   Int
-  phoneNumber String
 
   createdAt DateTime          @default(now())
   status    ReservationStatus @default(CONFIRMED)
