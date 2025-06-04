@@ -1,6 +1,6 @@
 import express from "express";
 import authRouter from "./auth";
-import adminRouter from "./admin";
+import adminRouter from "./admin/index";
 import socialLoginRouter from "./socialLogin";
 import resetPasswordRouter from "./reset-password";
 import hotspringRouter from "./hotspring";
