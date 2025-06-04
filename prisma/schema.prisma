@@ -23,13 +23,26 @@ model User {
   isVerified Boolean  @default(false)
   provider   String?
   socialId   String?
+
+  HotSpringLodgeReview HotSpringLodgeReview[]
+
+  HotSpringLodgeBookmark HotSpringLodgeBookmark[]
+
+  Reservation Reservation[]
+
+  ReportReview ReportReview[]
+
+  EmailVerification EmailVerification[]
 }
 
 model EmailVerification {
   id        Int      @id @default(autoincrement())
   email     String   @unique
+  userId    Int
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
+  
+  user     User     @relation(fields: [userId], references: [id])
 }
 
 model PasswordResetCode {
@@ -38,4 +51,154 @@ model PasswordResetCode {
   code      String
   createdAt DateTime @default(now())
   expiredAt DateTime
+}
+
+model HotSpringLodge {
+  id                Int     @id @default(autoincrement())
+  name              String
+  address           String
+  latitude          Float
+  longitude         Float
+  description       String?
+  accommodationType String
+
+  HotSpringLodgeReview HotSpringLodgeReview[]
+
+  HotSpringLodgeImage HotSpringLodgeImage[]
+
+  HotSpringLodgeBookmark HotSpringLodgeBookmark[]
+
+  HotSpringLodgeDetail HotSpringLodgeDetail[]
+
+  Reservation Reservation[]
+
+  RoomInventory RoomInventory[]
+
+  RoomType RoomType[]
+}
+
+model HotSpringLodgeReview {
+  id        Int      @id @default(autoincrement())
+  lodgeId   Int
+  userId    Int
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
+  user  User           @relation(fields: [userId], references: [id])
+
+  ReportReview ReportReview[]
+}
+
+model HotSpringLodgeImage {
+  id       Int    @id @default(autoincrement())
+  lodgeId  Int
+  imageUrl String
+
+  lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
+}
+
+model HotSpringLodgeBookmark {
+  id        Int      @id @default(autoincrement())
+  lodgeId   Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
+  user  User           @relation(fields: [userId], references: [id])
+}
+
+model HotSpringLodgeDetail {
+  id          Int      @id @default(autoincrement())
+  lodgeId     Int
+  description String?
+  amenities   String[]
+  policies    String[]
+  createdAt   DateTime @default(now())
+
+  lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED
+  PENDING
+}
+
+model Reservation {
+  id          Int      @id @default(autoincrement())
+  lodgeId     Int
+  userId      Int
+  checkIn     DateTime
+  checkOut    DateTime
+  adults      Int
+  children    Int
+  roomCount   Int
+  phoneNumber String
+
+  createdAt DateTime          @default(now())
+  status    ReservationStatus @default(CONFIRMED)
+
+  lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
+  user  User           @relation(fields: [userId], references: [id])
+
+  roomTypeId Int
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id])
+}
+
+enum PriceType {
+  WEEKDAY
+  WEEKEND
+  PEAK
+  OFF
+}
+
+model RoomPricing {
+  id         Int      @id @default(autoincrement())
+  roomTypeId Int
+  date       DateTime
+  price      Int
+  priceType  PriceType
+
+  roomType RoomType @relation(fields: [roomTypeId], references: [id])
+}
+
+model RoomInventory {
+  id             Int      @id @default(autoincrement())
+  lodgeId        Int
+  roomTypeId     Int
+  date           DateTime
+  availableRooms Int
+
+  lodge    HotSpringLodge @relation(fields: [lodgeId], references: [id])
+  roomType RoomType       @relation(fields: [roomTypeId], references: [id])
+}
+
+model RoomType {
+  id          Int     @id @default(autoincrement())
+  lodgeId     Int
+  name        String // e.g., "Standard", "Deluxe", "Suite"
+  description String?
+  basePrice   Int
+  maxAdults   Int
+  maxChildren Int
+  totalRooms  Int
+
+  lodge        HotSpringLodge @relation(fields: [lodgeId], references: [id])
+  reservations Reservation[]
+  RoomPricing  RoomPricing[]
+
+  RoomInventory RoomInventory[]
+}
+
+model ReportReview {
+  id        Int      @id @default(autoincrement())
+  reviewId  Int
+  userId    Int // 신고자
+  reason    String
+  createdAt DateTime @default(now())
+
+  review HotSpringLodgeReview @relation(fields: [reviewId], references: [id])
+  user   User                 @relation(fields: [userId], references: [id])
 }
