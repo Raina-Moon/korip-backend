@@ -41,9 +41,14 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
+    const { lodgeId, roomTypeId } = req.query;
   try {
     const inventory = await prisma.roomInventory.findMany({
-      include: {
+      where: {
+        lodgeId: lodgeId ? Number(lodgeId) : undefined,
+        roomTypeId: roomTypeId ? Number(roomTypeId) : undefined,
+      },
+        include: {
         lodge: true,
         roomType: true,
       },
