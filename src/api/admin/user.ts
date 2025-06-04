@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import express from "express";
-import { AuthRequest, authToken } from "../middlewares/authMiddleware";
-import { isAdmin } from "../middlewares/adminMiddleware";
+import { AuthRequest, authToken } from "../../middlewares/authMiddleware";
+import { isAdmin } from "../../middlewares/adminMiddleware";
 
 const prisma = new PrismaClient();
 const router = express.Router();
