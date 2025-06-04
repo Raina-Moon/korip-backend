@@ -55,6 +55,16 @@ router.get("/:id/reviews", async (req, res) => {
   try {
     const reviews = await prisma.hotSpringLodgeReview.findMany({
       where: { lodgeId: Number(id) },
+      include: {
+        user: {
+          select: {
+            nickname: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
     res.status(200).json(reviews);
   } catch (err) {
@@ -62,3 +72,5 @@ router.get("/:id/reviews", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
+export default router;
