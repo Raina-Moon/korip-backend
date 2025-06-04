@@ -88,3 +88,26 @@ router.post("/", authToken, async (req: AuthRequest, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+router.get("/", authToken, async (req: AuthRequest, res) => {
+  const userId = req.user?.userId;
+
+  try {
+    const reservations = await prisma.reservation.findMany({
+      where: {
+        userId: userId ? Number(userId) : undefined,
+      },
+      include: {
+        lodge: true,
+        roomType: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    res.status(200).json(reservations);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
