@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
 import { verifyAccessToken } from "../utils/jwt";
 
 export interface AuthRequest extends Request {
