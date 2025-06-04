@@ -6,7 +6,7 @@ import { isAdmin } from "../../middlewares/adminMiddleware";
 const prisma = new PrismaClient();
 const router = express.Router();
 
-router.get("/users", authToken, isAdmin, async (req: AuthRequest, res) => {
+router.get("/users", async (req: AuthRequest, res) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -23,30 +23,23 @@ router.get("/users", authToken, isAdmin, async (req: AuthRequest, res) => {
   }
 });
 
-router.delete(
-  "/users/:id",
-  authToken,
-  isAdmin,
-  async (req: AuthRequest, res) => {
-    const { id } = req.params;
-    try {
-      const user = await prisma.user.findUnique({
-        where: { id: Number(id) },
-        select: { id: true, nickname: true, email: true },
-      });
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      await prisma.user.delete({
-        where: { id: Number(id) },
-      });
-      return res
-        .status(200)
-        .json({ message: "User deleted successfully", user });
-    } catch (err) {
-      return res.status(500).json({ message: "Internal server error" });
+router.delete("/users/:id", async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: Number(id) },
+      select: { id: true, nickname: true, email: true },
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
+    await prisma.user.delete({
+      where: { id: Number(id) },
+    });
+    return res.status(200).json({ message: "User deleted successfully", user });
+  } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
   }
-);
+});
 
 export default router;
