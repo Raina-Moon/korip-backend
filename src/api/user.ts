@@ -5,33 +5,6 @@ import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.get(
-  "/reservations",
-  authToken,
-  async (req: AuthRequest, res) => {
-    const userId = req.user?.userId;
-
-    try {
-      const reservations = await prisma.reservation.findMany({
-        where: {
-          userId: userId ? Number(userId) : undefined,
-        },
-        include: {
-          lodge: true,
-          roomType: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-      res.status(200).json(reservations);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  }
-);
-
 router.get("/reviews", authToken, async (req: AuthRequest, res) => {
   const userId = req.user?.userId;
 
