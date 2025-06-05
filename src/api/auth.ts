@@ -57,7 +57,7 @@ router.post("/signup", async (req, res) => {
       nickname: newUser.nickname,
       email: newUser.email,
       createdAt: newUser.createdAt,
-      role:newUser.role,
+      role: newUser.role,
     });
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
@@ -101,10 +101,19 @@ router.post("/request-verify", async (req, res) => {
 
     await sendEmail({ email, type: "verify-email", content: verifyUrl });
 
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (!existingUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     await prisma.emailVerification.upsert({
       where: { email },
       update: { verified: false },
-      create: { email, verified: false },
+      create: {
+        email,
+        verified: false,
+        user: { connect: { id: existingUser.id } },
+      },
     });
 
     res.json({ message: "Verification email sent successfully" });
@@ -179,6 +188,7 @@ router.post("/login", async (req, res) => {
         id: user.id,
         email: user.email,
         nickname: user.nickname,
+        role: user.role,
       },
     });
   } catch (err) {
@@ -214,6 +224,32 @@ router.post("/logout", (req, res) => {
     });
     return res.status(200).json({ message: "Logged out successfully" });
   } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get("/me", authToken, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: {
+        id: true,
+        email: true,
+        nickname: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    return res.status(200).json(user);
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
