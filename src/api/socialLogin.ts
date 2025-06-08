@@ -1,12 +1,12 @@
 import { PrismaClient } from "@prisma/client";
-import axios from "axios";
 import express from "express";
 import { jwtDecode } from "jwt-decode";
+import { generateAccessToken } from "../utils/jwt";
 
 interface JwtPayload {
-    email: string;
-    name?: string;
-    sub: string;
+  email: string;
+  name?: string;
+  sub: string;
 }
 
 const router = express.Router();
@@ -39,15 +39,15 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const jwt = require("jsonwebtoken");
+    const token = generateAccessToken({ userId: user.id, role: user.role });
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET!,
-      {
-        expiresIn: "7d",
-      }
-    );
+    res.cookie("accessToken", token, {
+      httpOnly: true,
+      secure: false, // if using HTTPS, set this to true
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
     return res.status(200).json({
       token,
       user: {
