@@ -73,4 +73,59 @@ router.get("/:id/reviews", async (req, res) => {
   }
 });
 
+router.get("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const lodge = await prisma.hotSpringLodge.findUnique({
+      where: { id: Number(id) },
+      include: {
+        HotSpringLodgeImage: true,
+        HotSpringLodgeDetail: true,
+      },
+    });
+
+    if (!lodge) {
+      return res.status(404).json({ message: "Lodge not found" });
+    }
+
+    res.status(200).json(lodge);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get("/", async (req, res) => {
+  const { name, address, description, accommodationType } = req.query;
+
+  try {
+    const lodges = await prisma.hotSpringLodge.findMany({
+      where: {
+        name: name
+          ? { contains: String(name), mode: "insensitive" }
+          : undefined,
+        address: address
+          ? { contains: String(address), mode: "insensitive" }
+          : undefined,
+        description: description
+          ? { contains: String(description), mode: "insensitive" }
+          : undefined,
+        accommodationType: accommodationType
+          ? { equals: String(accommodationType) }
+          : undefined,
+      },
+      include: {
+        HotSpringLodgeImage: true,
+        HotSpringLodgeDetail: true,
+      },
+    });
+
+    res.status(200).json(lodges);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 export default router;
