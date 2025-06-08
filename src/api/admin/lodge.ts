@@ -17,9 +17,8 @@ router.post("/", async (req, res) => {
     if (
       !name ||
       !address ||
-      !latitude ||
-      !longitude ||
-      !description ||
+      latitude === 0 ||
+      longitude === 0 ||
       !accommodationType
     ) {
       return res.status(400).json({ message: "All fields are required" });
