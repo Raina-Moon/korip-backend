@@ -4,42 +4,6 @@ import { PrismaClient } from "@prisma/client";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post("/", async (req, res) => {
-  try {
-    const { lodgeId, roomTypeId, date, availableRooms } = req.body;
-    if (!lodgeId || !roomTypeId || !date || availableRooms === undefined) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-    const existingInventory = await prisma.roomInventory.findFirst({
-      where: {
-        lodgeId,
-        roomTypeId,
-        date: new Date(date),
-      },
-    });
-    if (existingInventory) {
-      return res
-        .status(400)
-        .json({ message: "Inventory for this date already exists" });
-    }
-    const updatedInventory = await prisma.roomInventory.create({
-      data: {
-        lodgeId,
-        roomTypeId,
-        date: new Date(date),
-        availableRooms,
-      },
-    });
-    res.status(201).json({
-      message: "Room inventory created successfully",
-      updatedInventory,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
 router.get("/", async (req, res) => {
     const { lodgeId, roomTypeId } = req.query;
   try {
