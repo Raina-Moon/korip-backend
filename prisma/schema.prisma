@@ -165,10 +165,10 @@ model RoomPricing {
 }
 
 model RoomInventory {
-  id             Int      @id @default(autoincrement())
+  id             Int @id @default(autoincrement())
   lodgeId        Int
   roomTypeId     Int
-  date           DateTime
+  totalRooms     Int
   availableRooms Int
 
   lodge    HotSpringLodge @relation(fields: [lodgeId], references: [id])
