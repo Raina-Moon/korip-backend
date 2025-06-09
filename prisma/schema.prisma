@@ -147,19 +147,18 @@ model Reservation {
   roomType   RoomType @relation(fields: [roomTypeId], references: [id])
 }
 
-enum PriceType {
-  WEEKDAY
-  WEEKEND
+enum SeasonalType {
   PEAK
   OFF
 }
 
-model RoomPricing {
-  id         Int       @id @default(autoincrement())
+model SeasonalPricing {
+  id         Int          @id @default(autoincrement())
   roomTypeId Int
-  date       DateTime
+  from       DateTime
+  to         DateTime
   price      Int
-  priceType  PriceType
+  type       SeasonalType
 
   roomType RoomType @relation(fields: [roomTypeId], references: [id])
 }
@@ -176,18 +175,19 @@ model RoomInventory {
 }
 
 model RoomType {
-  id          Int     @id @default(autoincrement())
-  lodgeId     Int
-  name        String // e.g., "Standard", "Deluxe", "Suite"
-  description String?
-  basePrice   Int
-  maxAdults   Int
-  maxChildren Int
-  totalRooms  Int
+  id           Int     @id @default(autoincrement())
+  lodgeId      Int
+  name         String // e.g., "Standard", "Deluxe", "Suite"
+  description  String?
+  basePrice    Int
+  weekendPrice Int?
+  maxAdults    Int
+  maxChildren  Int
+  totalRooms   Int
 
-  lodge        HotSpringLodge @relation(fields: [lodgeId], references: [id])
-  reservations Reservation[]
-  RoomPricing  RoomPricing[]
+  lodge           HotSpringLodge    @relation(fields: [lodgeId], references: [id])
+  reservations    Reservation[]
+  SeasonalPricing SeasonalPricing[]
 
   RoomInventory RoomInventory[]
 }
