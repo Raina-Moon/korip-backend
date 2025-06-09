@@ -88,10 +88,7 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const lodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
-      include: {
-        RoomType: true,
-        RoomInventory: true,
-      },
+      
     });
 
     if (!lodge) {
