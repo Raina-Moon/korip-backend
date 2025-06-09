@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { SeasonalType, PrismaClient } from "@prisma/client";
 import express from "express";
 
 const router = express.Router();
@@ -40,19 +40,40 @@ router.post("/", async (req, res) => {
       });
 
       const createRoomTypes = await Promise.all(
-        roomTypes.map((roomType) =>
-          tx.roomType.create({
+        roomTypes.map(async (roomType) => {
+          const createRoomType = await tx.roomType.create({
             data: {
               lodgeId: lodge.id,
               name: roomType.name,
               description: roomType.description,
               basePrice: roomType.basePrice,
+              weekendPrice: roomType.weekendPrice,
               maxAdults: roomType.maxAdults,
               maxChildren: roomType.maxChildren,
               totalRooms: roomType.totalRooms,
             },
-          })
-        )
+          });
+
+          if (Array.isArray(roomType.seasonalPricing)) {
+            await tx.seasonalPricing.createMany({
+              data: roomType.seasonalPricing.map(
+                (pricing: {
+                  from: string;
+                  to: string;
+                  price: number;
+                  type: SeasonalType;
+                }) => ({
+                  roomTypeId: roomType.id,
+                  from: new Date(pricing.from),
+                  to: new Date(pricing.to),
+                  price: pricing.price,
+                  priceType: pricing.type,
+                })
+              ),
+            });
+          }
+          return createRoomType;
+        })
       );
 
       await tx.roomInventory.createMany({
@@ -88,7 +109,6 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const lodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
-      
     });
 
     if (!lodge) {
