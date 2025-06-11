@@ -125,7 +125,7 @@ router.get("/:id", async (req, res) => {
       ...lodge,
       roomTypes: lodge.RoomType.map((roomType) => ({
         ...roomType,
-        SeasonalPricing: roomType.SeasonalPricing,
+      seasonalPricing: roomType.SeasonalPricing,
       })),
     });
   } catch (err) {
