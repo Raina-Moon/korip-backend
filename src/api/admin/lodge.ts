@@ -121,7 +121,13 @@ router.get("/:id", async (req, res) => {
     if (!lodge) {
       return res.status(404).json({ message: "Lodge not found" });
     }
-    res.status(200).json(lodge);
+    res.status(200).json({
+      ...lodge,
+      roomTypes: lodge.RoomType.map((roomType) => ({
+        ...roomType,
+        SeasonalPricing: roomType.SeasonalPricing,
+      })),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
