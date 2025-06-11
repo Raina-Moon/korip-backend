@@ -1,4 +1,4 @@
-import { SeasonalType, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import express from "express";
 
 const router = express.Router();
@@ -60,14 +60,14 @@ router.post("/", async (req, res) => {
                 (pricing: {
                   from: string;
                   to: string;
-                  price: number;
-                  type: SeasonalType;
+                  basePrice: number;
+                  weekendPrice: number;
                 }) => ({
                   roomTypeId: createRoomType.id,
                   from: new Date(pricing.from),
                   to: new Date(pricing.to),
-                  price: pricing.price,
-                  type: pricing.type,
+                  basePrice: pricing.basePrice,
+                  weekendPrice: pricing.weekendPrice,
                 })
               ),
             });
