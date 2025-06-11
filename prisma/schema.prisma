@@ -147,18 +147,13 @@ model Reservation {
   roomType   RoomType @relation(fields: [roomTypeId], references: [id])
 }
 
-enum SeasonalType {
-  PEAK
-  OFF
-}
-
 model SeasonalPricing {
-  id         Int          @id @default(autoincrement())
-  roomTypeId Int
-  from       DateTime
-  to         DateTime
-  price      Int
-  type       SeasonalType
+  id           Int      @id @default(autoincrement())
+  roomTypeId   Int
+  from         DateTime
+  to           DateTime
+  basePrice    Int      @default(0)
+  weekendPrice Int      @default(0)
 
   roomType RoomType @relation(fields: [roomTypeId], references: [id])
 }
