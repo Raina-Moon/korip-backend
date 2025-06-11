@@ -63,11 +63,11 @@ router.post("/", async (req, res) => {
                   price: number;
                   type: SeasonalType;
                 }) => ({
-                  roomTypeId: roomType.id,
+                  roomTypeId: createRoomType.id,
                   from: new Date(pricing.from),
                   to: new Date(pricing.to),
                   price: pricing.price,
-                  priceType: pricing.type,
+                  type: pricing.type,
                 })
               ),
             });
@@ -109,13 +109,13 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const lodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
-      include : {
-        RoomType : {
+      include: {
+        RoomType: {
           include: {
             SeasonalPricing: true,
           },
-        }
-      }
+        },
+      },
     });
 
     if (!lodge) {
