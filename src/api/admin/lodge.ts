@@ -125,7 +125,7 @@ router.get("/:id", async (req, res) => {
       ...lodge,
       roomTypes: lodge.RoomType.map((roomType) => ({
         ...roomType,
-      seasonalPricing: roomType.SeasonalPricing,
+        seasonalPricing: roomType.SeasonalPricing,
       })),
     });
   } catch (err) {
@@ -144,6 +144,7 @@ router.patch("/:id", async (req, res) => {
       longitude,
       description,
       accommodationType,
+      roomTypes,
     } = req.body;
 
     const existingLodge = await prisma.hotSpringLodge.findUnique({
@@ -153,19 +154,81 @@ router.patch("/:id", async (req, res) => {
     if (!existingLodge) {
       return res.status(404).json({ message: "Lodge not found" });
     }
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.hotSpringLodge.update({
+        where: { id: Number(id) },
+        data: {
+          name,
+          address,
+          latitude,
+          longitude,
+          description,
+          accommodationType,
+        },
+      });
 
-    const updated = await prisma.hotSpringLodge.update({
-      where: { id: Number(id) },
-      data: {
-        name,
-        address,
-        latitude,
-        longitude,
-        description,
-        accommodationType,
-      },
+      const existingRoomTypes = await tx.roomType.findMany({
+        where: { lodgeId: Number(id) },
+      });
+
+      const roomTypeIds = existingRoomTypes.map((rt) => rt.id);
+      await tx.seasonalPricing.deleteMany({
+        where: { roomTypeId: { in: roomTypeIds } },
+      });
+
+      await tx.roomInventory.deleteMany({
+        where: { lodgeId: Number(id) },
+      });
+
+      await tx.roomType.deleteMany({
+        where: { lodgeId: Number(id) },
+      });
+
+      const createRoomTypes = await Promise.all(
+        roomTypes.map(async (roomType: any) => {
+          const createdRoom = await tx.roomType.create({
+            data: {
+              lodgeId: updated.id,
+              name: roomType.name,
+              description: roomType.description,
+              basePrice: roomType.basePrice,
+              weekendPrice: roomType.weekendPrice,
+              maxAdults: roomType.maxAdults,
+              maxChildren: roomType.maxChildren,
+              totalRooms: roomType.totalRooms,
+            },
+          });
+
+          if (Array.isArray(roomType.seasonalPricing)) {
+            await tx.seasonalPricing.createMany({
+              data: roomType.seasonalPricing.map(
+                (pricing: {
+                  from: string;
+                  to: string;
+                  basePrice: number;
+                  weekendPrice: number;
+                }) => ({
+                  roomTypeId: createdRoom.id,
+                  from: new Date(pricing.from),
+                  to: new Date(pricing.to),
+                  basePrice: pricing.basePrice,
+                  weekendPrice: pricing.weekendPrice,
+                })
+              ),
+            });
+          }
+          return createdRoom;
+        })
+      );
+      return { updated, roomTypes: createRoomTypes };
     });
-    res.status(200).json({ message: "Lodge updated successfully", updated });
+    res
+      .status(200)
+      .json({
+        message: "Lodge updated successfully",
+        lodge: result.updated,
+        roomTypes: result.roomTypes,
+      });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
