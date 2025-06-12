@@ -246,6 +246,14 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ message: "Lodge not found" });
     }
 
+    await prisma.roomInventory.deleteMany({
+      where: { lodgeId: Number(id) },
+    })
+
+    await prisma.roomType.deleteMany({
+      where: { lodgeId: Number(id) },
+    })
+
     await prisma.hotSpringLodge.delete({
       where: { id: Number(id) },
     });
