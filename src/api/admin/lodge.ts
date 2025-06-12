@@ -222,13 +222,11 @@ router.patch("/:id", async (req, res) => {
       );
       return { updated, roomTypes: createRoomTypes };
     });
-    res
-      .status(200)
-      .json({
-        message: "Lodge updated successfully",
-        lodge: result.updated,
-        roomTypes: result.roomTypes,
-      });
+    res.status(200).json({
+      message: "Lodge updated successfully",
+      lodge: result.updated,
+      roomTypes: result.roomTypes,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
@@ -246,18 +244,31 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ message: "Lodge not found" });
     }
 
-    await prisma.roomInventory.deleteMany({
+    const roomTypes = await prisma.roomType.findMany({
       where: { lodgeId: Number(id) },
-    })
+    });
+
+    const roomTypeIds = roomTypes.map((rt) => rt.id);
+
+    await prisma.seasonalPricing.deleteMany({
+      where: { roomTypeId: { in: roomTypeIds } },
+    });
 
     await prisma.roomType.deleteMany({
       where: { lodgeId: Number(id) },
-    })
+    });
 
-    await prisma.hotSpringLodge.delete({
+    await prisma.roomInventory.deleteMany({
+      where: { lodgeId: Number(id) },
+    });
+
+    const deleted = await prisma.hotSpringLodge.delete({
       where: { id: Number(id) },
     });
-    res.status(200).json({ message: "Lodge deleted successfully" });
+
+    res
+      .status(200)
+      .json({ message: "Lodge deleted successfully", lodge: deleted });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
