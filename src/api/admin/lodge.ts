@@ -253,14 +253,15 @@ router.delete("/:id", async (req, res) => {
     await prisma.seasonalPricing.deleteMany({
       where: { roomTypeId: { in: roomTypeIds } },
     });
+    
+    await prisma.roomInventory.deleteMany({
+      where: { lodgeId: Number(id) },
+    });
 
     await prisma.roomType.deleteMany({
       where: { lodgeId: Number(id) },
     });
 
-    await prisma.roomInventory.deleteMany({
-      where: { lodgeId: Number(id) },
-    });
 
     const deleted = await prisma.hotSpringLodge.delete({
       where: { id: Number(id) },
