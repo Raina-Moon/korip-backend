@@ -135,6 +135,7 @@ router.get("/:id", async (req, res) => {
 });
 
 router.patch("/:id", async (req, res) => {
+  console.log("Updating lodge with ID:", req.params.id);
   try {
     const { id } = req.params;
     const {
