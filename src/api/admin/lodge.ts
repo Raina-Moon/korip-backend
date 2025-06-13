@@ -13,6 +13,7 @@ router.post("/", async (req, res) => {
     description,
     accommodationType,
     roomTypes,
+    hotSpringLodgeImages,
   } = req.body;
 
   if (
@@ -21,7 +22,8 @@ router.post("/", async (req, res) => {
     latitude === 0 ||
     longitude === 0 ||
     !accommodationType ||
-    !Array.isArray(roomTypes)
+    !Array.isArray(roomTypes) ||
+    hotSpringLodgeImages.length === 0
   ) {
     return res.status(400).json({ message: "All fields are required" });
   }
@@ -38,6 +40,13 @@ router.post("/", async (req, res) => {
           accommodationType,
         },
       });
+
+      await tx.hotSpringLodgeImage.createMany({
+        data: hotSpringLodgeImages.map((image: { imageUrl: string }) => ({
+          lodgeId: lodge.id,
+          imageUrl: image.imageUrl,
+        })),
+      })
 
       const createRoomTypes = await Promise.all(
         roomTypes.map(async (roomType) => {
@@ -68,6 +77,17 @@ router.post("/", async (req, res) => {
                   to: new Date(pricing.to),
                   basePrice: pricing.basePrice,
                   weekendPrice: pricing.weekendPrice,
+                })
+              ),
+            });
+          }
+
+          if (Array.isArray(roomType.roomTypeImages)) {
+            await tx.roomTypeImage.createMany({
+              data: roomType.roomTypeImages.map(
+                (images: { imageUrl: string }) => ({
+                  roomTypeId: createRoomType.id,
+                  imageUrl: images.imageUrl,
                 })
               ),
             });
@@ -253,7 +273,7 @@ router.delete("/:id", async (req, res) => {
     await prisma.seasonalPricing.deleteMany({
       where: { roomTypeId: { in: roomTypeIds } },
     });
-    
+
     await prisma.roomInventory.deleteMany({
       where: { lodgeId: Number(id) },
     });
@@ -261,7 +281,6 @@ router.delete("/:id", async (req, res) => {
     await prisma.roomType.deleteMany({
       where: { lodgeId: Number(id) },
     });
-
 
     const deleted = await prisma.hotSpringLodge.delete({
       where: { id: Number(id) },
