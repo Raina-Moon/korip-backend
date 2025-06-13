@@ -100,6 +100,14 @@ model HotSpringLodgeImage {
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
 }
 
+model RoomTypeImage {
+  id         Int    @id @default(autoincrement())
+  roomTypeId Int
+  imageUrl   String
+
+  roomType RoomType @relation(fields: [roomTypeId], references: [id])
+}
+
 model HotSpringLodgeBookmark {
   id        Int      @id @default(autoincrement())
   lodgeId   Int
@@ -185,6 +193,8 @@ model RoomType {
   SeasonalPricing SeasonalPricing[]
 
   RoomInventory RoomInventory[]
+
+  RoomTypeImage RoomTypeImage[]
 }
 
 model ReportReview {
