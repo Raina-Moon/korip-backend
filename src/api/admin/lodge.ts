@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import express from "express";
 
 const router = express.Router();
@@ -29,7 +29,7 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const lodge = await tx.hotSpringLodge.create({
         data: {
           name,
@@ -42,9 +42,9 @@ router.post("/", async (req, res) => {
       });
 
       await tx.hotSpringLodgeImage.createMany({
-        data: hotSpringLodgeImages.map((image: { imageUrl: string }) => ({
+        data: hotSpringLodgeImages.map((image:string) => ({
           lodgeId: lodge.id,
-          imageUrl: image.imageUrl,
+          imageUrl: image,
         })),
       })
 
@@ -63,7 +63,7 @@ router.post("/", async (req, res) => {
             },
           });
 
-          if (Array.isArray(roomType.seasonalPricing)) {
+          if (roomType.seasonalPricing?.length) {
             await tx.seasonalPricing.createMany({
               data: roomType.seasonalPricing.map(
                 (pricing: {
