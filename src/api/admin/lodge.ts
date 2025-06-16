@@ -94,12 +94,12 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
               });
             }
 
-            if (Array.isArray(roomType.roomTypeImages)) {
+            if (Array.isArray(roomType.images)) {
               await tx.roomTypeImage.createMany({
-                data: roomType.roomTypeImages.map(
-                  (images: { imageUrl: string }) => ({
+                data: roomType.images.map(
+                  (img: { imageUrl: string }) => ({
                     roomTypeId: createRoomType.id,
-                    imageUrl: images.imageUrl,
+                    imageUrl: img.imageUrl,
                   })
                 ),
               });
@@ -143,9 +143,11 @@ router.get("/:id", (async (req, res) => {
     const lodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
       include: {
-        RoomType: {
+        images: true,
+        roomTypes: {
           include: {
-            SeasonalPricing: true,
+            seasonalPricing: true,
+            images:true,
           },
         },
       },
@@ -156,9 +158,9 @@ router.get("/:id", (async (req, res) => {
     }
     res.status(200).json({
       ...lodge,
-      roomTypes: lodge.RoomType.map((roomType) => ({
+      roomTypes: lodge.roomTypes.map((roomType) => ({
         ...roomType,
-        seasonalPricing: roomType.SeasonalPricing,
+        seasonalPricing: roomType.seasonalPricing,
       })),
     });
   } catch (err) {
