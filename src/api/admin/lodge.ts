@@ -170,7 +170,7 @@ router.get("/:id", (async (req, res) => {
   }
 }) as RequestHandler);
 
-router.patch("/:id", (async (req, res) => {
+router.patch("/:id", uploadMiddleware,(async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -182,6 +182,9 @@ router.patch("/:id", (async (req, res) => {
       accommodationType,
       roomTypes,
     } = req.body;
+
+    const keepImgIds = JSON.parse(req.body.keepImgIds) || [];
+    const files = req.files as Express.Multer.File[];
 
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
@@ -219,6 +222,32 @@ router.patch("/:id", (async (req, res) => {
       await tx.roomType.deleteMany({
         where: { lodgeId: Number(id) },
       });
+
+      await tx.hotSpringLodgeImage.deleteMany({
+        where : {
+          lodgeId: Number(id),
+          id: { notIn: keepImgIds },
+        }
+      })
+
+      if(files?.length > 0) {
+        const uploadLodgeImages = await Promise.all(
+          files.map(async (image) => {
+            const imageUrl = await uploadToCloudinary(
+              image.buffer,
+              `lodge_${uuidv4()}`
+            );
+            return {
+              lodgeId: updated.id,
+              imageUrl,
+            };
+          })
+        );
+
+        await tx.hotSpringLodgeImage.createMany({
+          data: uploadLodgeImages,
+        });
+      }
 
       const createRoomTypes = await Promise.all(
         roomTypes.map(async (roomType: any) => {
