@@ -21,17 +21,18 @@ export const authToken = (
 
   const token = req.cookies.accessToken;
   if (!token) {
-    return res.status(401).json({ message: "No token provided" });
+    res.status(401).json({ message: "No token provided" });
+    return;
   }
   try {
     const decoded = verifyAccessToken(token) as {
       userId: number;
       role: string;
     };
-    
+
     req.user = { userId: decoded.userId, role: decoded.role };
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Invalid token" });
+    res.status(401).json({ message: "Invalid token" });
   }
 };
