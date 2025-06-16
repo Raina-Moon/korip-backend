@@ -354,6 +354,10 @@ router.delete("/:id", (async (req, res) => {
       where: { lodgeId: Number(id) },
     });
 
+    await prisma.hotSpringLodgeImage.deleteMany({
+      where: { lodgeId: Number(id) },
+    });
+
     const deleted = await prisma.hotSpringLodge.delete({
       where: { id: Number(id) },
     });
