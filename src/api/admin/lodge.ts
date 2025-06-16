@@ -3,6 +3,7 @@ import express, { Request, RequestHandler, Response } from "express";
 import multer from "multer";
 import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
 import { v4 as uuidv4 } from "uuid";
+import { deleteFromCloudinary } from "../../utils/deleteFromCloudinary";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -45,13 +46,14 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
         const uploadLodgeImages = await Promise.all(
           hotSpringLodgeImages.map(async (image) => {
-            const imageUrl = await uploadToCloudinary(
+            const { imageUrl, publicId } = await uploadToCloudinary(
               image.buffer,
               `lodge_${uuidv4()}`
             );
             return {
               lodgeId: lodge.id,
               imageUrl,
+              publicId,
             };
           })
         );
@@ -96,12 +98,10 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
             if (Array.isArray(roomType.images)) {
               await tx.roomTypeImage.createMany({
-                data: roomType.images.map(
-                  (img: { imageUrl: string }) => ({
-                    roomTypeId: createRoomType.id,
-                    imageUrl: img.imageUrl,
-                  })
-                ),
+                data: roomType.images.map((img: { imageUrl: string }) => ({
+                  roomTypeId: createRoomType.id,
+                  imageUrl: img.imageUrl,
+                })),
               });
             }
             return createRoomType;
@@ -147,7 +147,7 @@ router.get("/:id", (async (req, res) => {
         roomTypes: {
           include: {
             seasonalPricing: true,
-            images:true,
+            images: true,
           },
         },
       },
@@ -170,7 +170,7 @@ router.get("/:id", (async (req, res) => {
   }
 }) as RequestHandler);
 
-router.patch("/:id", uploadMiddleware,(async (req, res) => {
+router.patch("/:id", uploadMiddleware, (async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -224,22 +224,23 @@ router.patch("/:id", uploadMiddleware,(async (req, res) => {
       });
 
       await tx.hotSpringLodgeImage.deleteMany({
-        where : {
+        where: {
           lodgeId: Number(id),
           id: { notIn: keepImgIds },
-        }
-      })
+        },
+      });
 
-      if(files?.length > 0) {
+      if (files?.length > 0) {
         const uploadLodgeImages = await Promise.all(
           files.map(async (image) => {
-            const imageUrl = await uploadToCloudinary(
+            const { imageUrl, publicId } = await uploadToCloudinary(
               image.buffer,
               `lodge_${uuidv4()}`
             );
             return {
               lodgeId: updated.id,
               imageUrl,
+              publicId,
             };
           })
         );
@@ -248,6 +249,29 @@ router.patch("/:id", uploadMiddleware,(async (req, res) => {
           data: uploadLodgeImages,
         });
       }
+
+      await tx.hotSpringLodgeImage
+        .findMany({
+          where: { lodgeId: updated.id, id: { notIn: keepImgIds } },
+        })
+        .then(async (imagesToDelete) => {
+          await Promise.all(
+            imagesToDelete.map((img) => {
+              if (img.publicId) {
+                deleteFromCloudinary(img.publicId).catch((err) => {
+                  console.error(`Failed to delete image ${img.publicId}:`, err);
+                });
+              }
+            })
+          );
+        });
+
+      await tx.hotSpringLodgeImage.deleteMany({
+        where: {
+          lodgeId: updated.id,
+          id: { notIn: keepImgIds },
+        },
+      });
 
       const createRoomTypes = await Promise.all(
         roomTypes.map(async (roomType: any) => {
