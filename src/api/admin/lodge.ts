@@ -1,7 +1,8 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import express, { Request, RequestHandler, Response } from "express";
 import multer from "multer";
-import cloudinary from "../../utils/cloudinary";
+import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
+import { v4 as uuidv4 } from "uuid";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -50,11 +51,18 @@ router.post(
             },
           });
 
+          const uploadLodgeImages = await Promise.all(
+            hotSpringLodgeImages.map(async (image) => {
+              const imageUrl = await uploadToCloudinary(image.buffer,`lodge_${uuidv4()}` )
+              return {
+                lodgeId: lodge.id,
+                imageUrl,
+              };
+            })
+          )
+
           await tx.hotSpringLodgeImage.createMany({
-            data: hotSpringLodgeImages.map((image: Express.Multer.File) => ({
-              lodgeId: lodge.id,
-              imageUrl: image.path || "",
-            })),
+            data: uploadLodgeImages,
           });
 
           const createRoomTypes = await Promise.all(
