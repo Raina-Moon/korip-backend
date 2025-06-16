@@ -41,6 +41,7 @@
     "multer": "^2.0.1",
     "nodemailer": "^7.0.3",
     "prisma": "^6.8.2",
+    "uuid": "^11.1.0",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
