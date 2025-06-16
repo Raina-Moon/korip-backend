@@ -223,13 +223,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         where: { lodgeId: Number(id) },
       });
 
-      await tx.hotSpringLodgeImage.deleteMany({
-        where: {
-          lodgeId: Number(id),
-          id: { notIn: keepImgIds },
-        },
-      });
-
       if (files?.length > 0) {
         const uploadLodgeImages = await Promise.all(
           files.map(async (image) => {
@@ -338,6 +331,16 @@ router.delete("/:id", (async (req, res) => {
     });
 
     const roomTypeIds = roomTypes.map((rt) => rt.id);
+
+    const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
+      where: { lodgeId: Number(id) },
+    });
+
+    await Promise.all(
+      lodgeImages.map((img) =>
+        img.publicId ? deleteFromCloudinary(img.publicId) : Promise.resolve()
+      )
+    );
 
     await prisma.seasonalPricing.deleteMany({
       where: { roomTypeId: { in: roomTypeIds } },
