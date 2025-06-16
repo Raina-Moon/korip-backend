@@ -2,18 +2,22 @@ import cloudinary from "./cloudinary";
 
 export const uploadToCloudinary = async (
   buffer: Buffer,
-  filename: string
-): Promise<string> => {
+  filename: string,
+  publicId?: string
+): Promise<{imageUrl: string, publicId: string}> => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: "lodges",
-        public_id: filename,
+        public_id: publicId || filename,
         resource_type: "image",
       },
       (error, result) => {
         if (error) return reject(error);
-        else resolve(result!.secure_url);
+        else resolve({
+          imageUrl: result!.secure_url,
+          publicId: result!.public_id,
+        });
       }
     );
     stream.end(buffer);
