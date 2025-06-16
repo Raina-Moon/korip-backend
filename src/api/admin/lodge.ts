@@ -1,118 +1,131 @@
 import { Prisma, PrismaClient } from "@prisma/client";
-import express from "express";
+import express, { Request, RequestHandler, Response } from "express";
+import multer from "multer";
+import cloudinary from "../../utils/cloudinary";
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const upload = multer({ storage: multer.memoryStorage() });
+const uploadMiddleware= upload.array("hotSpringLodgeImages", 30);
 
-router.post("/", async (req, res) => {
-  const {
-    name,
-    address,
-    latitude,
-    longitude,
-    description,
-    accommodationType,
-    roomTypes,
-    hotSpringLodgeImages,
-  } = req.body;
+router.post(
+  "/",
+  uploadMiddleware,
+  (async (req: Request, res: Response) => {
+    const {
+      name,
+      address,
+      latitude,
+      longitude,
+      description,
+      accommodationType,
+      roomTypes,
+    } = req.body;
 
-  if (
-    !name ||
-    !address ||
-    latitude === 0 ||
-    longitude === 0 ||
-    !accommodationType ||
-    !Array.isArray(roomTypes) ||
-    hotSpringLodgeImages.length === 0
-  ) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
+    const hotSpringLodgeImages = req.files as Express.Multer.File[] || [];
 
-  try {
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const lodge = await tx.hotSpringLodge.create({
-        data: {
-          name,
-          address,
-          latitude,
-          longitude,
-          description,
-          accommodationType,
-        },
-      });
+    if (
+      !name ||
+      !address ||
+      latitude === 0 ||
+      longitude === 0 ||
+      !accommodationType ||
+      !Array.isArray(roomTypes) ||
+      hotSpringLodgeImages.length === 0
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
 
-      await tx.hotSpringLodgeImage.createMany({
-        data: hotSpringLodgeImages.map((image:string) => ({
-          lodgeId: lodge.id,
-          imageUrl: image,
-        })),
-      })
-
-      const createRoomTypes = await Promise.all(
-        roomTypes.map(async (roomType) => {
-          const createRoomType = await tx.roomType.create({
+    try {
+      const result = await prisma.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const lodge = await tx.hotSpringLodge.create({
             data: {
-              lodgeId: lodge.id,
-              name: roomType.name,
-              description: roomType.description,
-              basePrice: roomType.basePrice,
-              weekendPrice: roomType.weekendPrice,
-              maxAdults: roomType.maxAdults,
-              maxChildren: roomType.maxChildren,
-              totalRooms: roomType.totalRooms,
+              name,
+              address,
+              latitude,
+              longitude,
+              description,
+              accommodationType,
             },
           });
 
-          if (roomType.seasonalPricing?.length) {
-            await tx.seasonalPricing.createMany({
-              data: roomType.seasonalPricing.map(
-                (pricing: {
-                  from: string;
-                  to: string;
-                  basePrice: number;
-                  weekendPrice: number;
-                }) => ({
-                  roomTypeId: createRoomType.id,
-                  from: new Date(pricing.from),
-                  to: new Date(pricing.to),
-                  basePrice: pricing.basePrice,
-                  weekendPrice: pricing.weekendPrice,
-                })
-              ),
-            });
-          }
+          await tx.hotSpringLodgeImage.createMany({
+            data: hotSpringLodgeImages.map((image: Express.Multer.File) => ({
+              lodgeId: lodge.id,
+              imageUrl: image.path || "",
+            })),
+          });
 
-          if (Array.isArray(roomType.roomTypeImages)) {
-            await tx.roomTypeImage.createMany({
-              data: roomType.roomTypeImages.map(
-                (images: { imageUrl: string }) => ({
-                  roomTypeId: createRoomType.id,
-                  imageUrl: images.imageUrl,
-                })
-              ),
-            });
-          }
-          return createRoomType;
-        })
+          const createRoomTypes = await Promise.all(
+            roomTypes.map(async (roomType) => {
+              const createRoomType = await tx.roomType.create({
+                data: {
+                  lodgeId: lodge.id,
+                  name: roomType.name,
+                  description: roomType.description,
+                  basePrice: roomType.basePrice,
+                  weekendPrice: roomType.weekendPrice,
+                  maxAdults: roomType.maxAdults,
+                  maxChildren: roomType.maxChildren,
+                  totalRooms: roomType.totalRooms,
+                },
+              });
+
+              if (roomType.seasonalPricing?.length) {
+                await tx.seasonalPricing.createMany({
+                  data: roomType.seasonalPricing.map(
+                    (pricing: {
+                      from: string;
+                      to: string;
+                      basePrice: number;
+                      weekendPrice: number;
+                    }) => ({
+                      roomTypeId: createRoomType.id,
+                      from: new Date(pricing.from),
+                      to: new Date(pricing.to),
+                      basePrice: pricing.basePrice,
+                      weekendPrice: pricing.weekendPrice,
+                    })
+                  ),
+                });
+              }
+
+              if (Array.isArray(roomType.roomTypeImages)) {
+                await tx.roomTypeImage.createMany({
+                  data: roomType.roomTypeImages.map(
+                    (images: { imageUrl: string }) => ({
+                      roomTypeId: createRoomType.id,
+                      imageUrl: images.imageUrl,
+                    })
+                  ),
+                });
+              }
+              return createRoomType;
+            })
+          );
+
+          await tx.roomInventory.createMany({
+            data: createRoomTypes.map((roomType) => ({
+              lodgeId: lodge.id,
+              roomTypeId: roomType.id,
+              totalRooms: roomType.totalRooms,
+              availableRooms: roomType.totalRooms,
+            })),
+          });
+
+          return { lodge, roomTypes: createRoomTypes };
+        }
       );
-
-      await tx.roomInventory.createMany({
-        data: createRoomTypes.map((roomType) => ({
-          lodgeId: lodge.id,
-          roomTypeId: roomType.id,
-          totalRooms: roomType.totalRooms,
-          availableRooms: roomType.totalRooms,
-        })),
-      });
-
-      return { lodge, roomTypes: createRoomTypes };
-    });
-    res.status(201).json({ message: "Lodge created successfully", ...result });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
+      res
+        .status(201)
+        .json({ message: "Lodge created successfully", ...result });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
-});
+) as RequestHandler);
 
 router.get("/", async (_req, res) => {
   try {
@@ -124,7 +137,7 @@ router.get("/", async (_req, res) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", (async (req, res) => {
   try {
     const { id } = req.params;
     const lodge = await prisma.hotSpringLodge.findUnique({
@@ -152,9 +165,9 @@ router.get("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}) as RequestHandler);
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", (async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -251,9 +264,9 @@ router.patch("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}) as RequestHandler);
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", (async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -293,6 +306,6 @@ router.delete("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}) as RequestHandler);
 
 export default router;
