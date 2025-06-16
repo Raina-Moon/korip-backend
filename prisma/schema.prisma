@@ -172,6 +172,7 @@ model RoomInventory {
   roomTypeId     Int
   totalRooms     Int
   availableRooms Int
+  date           DateTime?
 
   lodge    HotSpringLodge @relation(fields: [lodgeId], references: [id])
   roomType RoomType       @relation(fields: [roomTypeId], references: [id])
