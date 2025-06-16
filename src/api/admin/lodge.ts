@@ -158,6 +158,7 @@ router.get("/:id", (async (req, res) => {
     }
     res.status(200).json({
       ...lodge,
+      images: lodge.images,
       roomTypes: lodge.roomTypes.map((roomType) => ({
         ...roomType,
         seasonalPricing: roomType.seasonalPricing,
