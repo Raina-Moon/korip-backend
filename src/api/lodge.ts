@@ -81,8 +81,8 @@ router.get("/:id", asyncHandler(async (req, res) => {
     const lodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
       include: {
-        HotSpringLodgeImage: true,
-        HotSpringLodgeDetail: true,
+        images: true,
+        details: true,
       },
     });
 
@@ -117,8 +117,8 @@ router.get("/", async (req, res) => {
           : undefined,
       },
       include: {
-        HotSpringLodgeImage: true,
-        HotSpringLodgeDetail: true,
+        images: true,
+        details: true,
       },
     });
 
