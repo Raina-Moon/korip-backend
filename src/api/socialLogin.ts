@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import express from "express";
 import { jwtDecode } from "jwt-decode";
 import { generateAccessToken } from "../utils/jwt";
+import { asyncHandler } from "../utils/asyncHandler";
 
 interface JwtPayload {
   email: string;
@@ -12,7 +13,7 @@ interface JwtPayload {
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post("/", async (req, res) => {
+router.post("/", asyncHandler(async (req, res) => {
   const { provider, accessToken } = req.body;
 
   if (provider !== "google") {
@@ -62,6 +63,6 @@ router.post("/", async (req, res) => {
       .status(500)
       .json({ message: "Error fetching user info from Google" });
   }
-});
+}));
 
 export default router;

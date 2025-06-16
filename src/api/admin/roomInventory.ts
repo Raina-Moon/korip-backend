@@ -1,5 +1,6 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
+import { asyncHandler } from "../../utils/asyncHandler";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -24,7 +25,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { date, availableRooms } = req.body;
   try {
@@ -51,9 +52,9 @@ router.patch("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", asyncHandler(async (req, res) => {
   const { id } = req.params;
   try {
     const existingInventory = await prisma.roomInventory.findUnique({
@@ -70,6 +71,6 @@ router.delete("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 export default router;

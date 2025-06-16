@@ -1,11 +1,12 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post("/:id/review", authToken, async (req: AuthRequest, res) => {
+router.post("/:id/review", authToken, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
   const { rating, comment } = req.body;
   const userId = req.user?.userId;
@@ -48,9 +49,9 @@ router.post("/:id/review", authToken, async (req: AuthRequest, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.get("/:id/reviews", async (req, res) => {
+router.get("/:id/reviews", asyncHandler(async (req, res) => {
   const { id } = req.params;
   try {
     const reviews = await prisma.hotSpringLodgeReview.findMany({
@@ -71,9 +72,9 @@ router.get("/:id/reviews", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -94,7 +95,7 @@ router.get("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 router.get("/", async (req, res) => {
   const { name, address, description, accommodationType } = req.query;

@@ -1,11 +1,12 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.patch("/:id", authToken, async (req: AuthRequest, res) => {
+router.patch("/:id", authToken, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
   const { rating, comment } = req.body;
   const userId = req.user?.userId;
@@ -42,9 +43,9 @@ router.patch("/:id", authToken, async (req: AuthRequest, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.delete("/:id", authToken, async (req: AuthRequest, res) => {
+router.delete("/:id", authToken, asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
   const userId = req.user?.userId;
 
@@ -72,6 +73,6 @@ router.delete("/:id", authToken, async (req: AuthRequest, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 export default router;

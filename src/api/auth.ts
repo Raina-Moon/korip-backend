@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import express from "express";
+import express, { Request, RequestHandler, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
@@ -9,11 +9,12 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post("/signup", async (req, res) => {
+router.post("/signup", asyncHandler(async (req: Request, res: Response) => {
   const { nickname, email, password } = req.body;
   if (!nickname || !email || !password) {
     return res.status(400).json({ message: "All fields are required" });
@@ -62,9 +63,9 @@ router.post("/signup", async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.get("/verify-email", async (req, res) => {
+router.get("/verify-email", asyncHandler(async (req: Request, res: Response) => {
   const { token } = req.query;
   if (!token) {
     return res.status(400).json({ message: "Token is required" });
@@ -85,9 +86,9 @@ router.get("/verify-email", async (req, res) => {
   } catch (err) {
     return res.status(400).json({ message: "Invalid or expired token" });
   }
-});
+}));
 
-router.post("/request-verify", async (req, res) => {
+router.post("/request-verify", asyncHandler(async (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
@@ -120,9 +121,9 @@ router.post("/request-verify", async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.delete("/:id", authToken, async (req: AuthRequest, res) => {
+router.delete("/:id", authToken, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const userFromToken = req.user!.userId;
 
@@ -140,9 +141,9 @@ router.delete("/:id", authToken, async (req: AuthRequest, res) => {
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.post("/login", async (req, res) => {
+router.post("/login", asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -194,9 +195,9 @@ router.post("/login", async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.post("/refresh", async (req, res) => {
+router.post("/refresh", asyncHandler(async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
 
   if (!refreshToken) {
@@ -213,9 +214,9 @@ router.post("/refresh", async (req, res) => {
   } catch (err) {
     return res.status(403).json({ message: "Invalid refresh token" });
   }
-});
+}));
 
-router.post("/logout", (req, res) => {
+router.post("/logout", asyncHandler(async (req, res) => {
   try {
     res.clearCookie("refreshToken", {
       httpOnly: true,
@@ -226,9 +227,9 @@ router.post("/logout", (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.get("/me", authToken, async (req: AuthRequest, res) => {
+router.get("/me", authToken, asyncHandler(async (req: AuthRequest, res) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -252,6 +253,6 @@ router.get("/me", authToken, async (req: AuthRequest, res) => {
     console.error(err);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 export default router;

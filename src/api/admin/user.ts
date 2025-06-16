@@ -2,11 +2,12 @@ import { PrismaClient } from "@prisma/client";
 import express from "express";
 import { AuthRequest, authToken } from "../../middlewares/authMiddleware";
 import { isAdmin } from "../../middlewares/adminMiddleware";
+import { asyncHandler } from "../../utils/asyncHandler";
 
 const prisma = new PrismaClient();
 const router = express.Router();
 
-router.get("/users", async (req: AuthRequest, res) => {
+router.get("/users", asyncHandler(async (req: AuthRequest, res) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -21,9 +22,9 @@ router.get("/users", async (req: AuthRequest, res) => {
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.delete("/users/:id", async (req: AuthRequest, res) => {
+router.delete("/users/:id", asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
   try {
     const user = await prisma.user.findUnique({
@@ -40,6 +41,6 @@ router.delete("/users/:id", async (req: AuthRequest, res) => {
   } catch (err) {
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 export default router;

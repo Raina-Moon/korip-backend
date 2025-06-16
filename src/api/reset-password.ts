@@ -3,11 +3,12 @@ import express from "express";
 import { generateResetCode } from "../utils/generateResetCode";
 import { sendEmail } from "../utils/mailer";
 import bcrypt from "bcrypt";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post("/", async (req, res) => {
+router.post("/", asyncHandler(async (req, res) => {
   const { email } = req.body;
 
   try {
@@ -35,9 +36,9 @@ router.post("/", async (req, res) => {
     console.error(err);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.post("/verify", async (req, res) => {
+router.post("/verify", asyncHandler(async (req, res) => {
   const { email, code } = req.body;
 
   try {
@@ -59,9 +60,9 @@ router.post("/verify", async (req, res) => {
     console.error(err);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.post("/update", async (req, res) => {
+router.post("/update", asyncHandler(async (req, res) => {
   const { email, newPassword } = req.body;
 
   try {
@@ -80,6 +81,6 @@ router.post("/update", async (req, res) => {
     console.error(err);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 export default router;
