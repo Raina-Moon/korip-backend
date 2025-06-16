@@ -9,7 +9,7 @@ import { isAdmin } from "../../middlewares/adminMiddleware";
 
 const router = express.Router();
 
-router.use(authToken, isAdmin);
+router.use("/",authToken, isAdmin);
 
 router.use("/user", userRouter);
 router.use("/lodge", lodgeRouter);
