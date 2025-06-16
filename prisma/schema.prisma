@@ -62,19 +62,19 @@ model HotSpringLodge {
   description       String?
   accommodationType String
 
-  HotSpringLodgeReview HotSpringLodgeReview[]
+  reviews HotSpringLodgeReview[]
 
-  HotSpringLodgeImage HotSpringLodgeImage[]
+  images HotSpringLodgeImage[]
 
-  HotSpringLodgeBookmark HotSpringLodgeBookmark[]
+  bookmarks HotSpringLodgeBookmark[]
 
-  HotSpringLodgeDetail HotSpringLodgeDetail[]
+  details HotSpringLodgeDetail[]
 
-  Reservation Reservation[]
+  reservations Reservation[]
 
-  RoomInventory RoomInventory[]
+  inventories RoomInventory[]
 
-  RoomType RoomType[]
+  roomTypes RoomType[]
 }
 
 model HotSpringLodgeReview {
@@ -89,7 +89,7 @@ model HotSpringLodgeReview {
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
   user  User           @relation(fields: [userId], references: [id])
 
-  ReportReview ReportReview[]
+   reports ReportReview[]
 }
 
 model HotSpringLodgeImage {
@@ -191,11 +191,11 @@ model RoomType {
 
   lodge           HotSpringLodge    @relation(fields: [lodgeId], references: [id])
   reservations    Reservation[]
-  SeasonalPricing SeasonalPricing[]
+  seasonalPricing SeasonalPricing[]
 
-  RoomInventory RoomInventory[]
+  inventories RoomInventory[]
 
-  RoomTypeImage RoomTypeImage[]
+  images RoomTypeImage[]
 }
 
 model ReportReview {
