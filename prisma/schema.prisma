@@ -89,13 +89,14 @@ model HotSpringLodgeReview {
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
   user  User           @relation(fields: [userId], references: [id])
 
-   reports ReportReview[]
+  reports ReportReview[]
 }
 
 model HotSpringLodgeImage {
-  id       Int    @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
   lodgeId  Int
   imageUrl String
+  publicId String?
 
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
 }
@@ -167,7 +168,7 @@ model SeasonalPricing {
 }
 
 model RoomInventory {
-  id             Int @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   lodgeId        Int
   roomTypeId     Int
   totalRooms     Int
