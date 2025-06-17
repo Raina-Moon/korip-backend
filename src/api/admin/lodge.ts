@@ -176,8 +176,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const {
       name,
       address,
-      latitude,
-      longitude,
       description,
       accommodationType,
     } = req.body;
@@ -185,6 +183,8 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const keepImgIds = JSON.parse(req.body.keepImgIds || "[]");
     const files = req.files as Express.Multer.File[];
     const roomTypes = JSON.parse(req.body.roomTypes);
+    const latitude = parseFloat(req.body.latitude);
+    const longitude = parseFloat(req.body.longitude);
 
     console.log("Room Types:", roomTypes);
     console.log("Keep Image IDs:", keepImgIds);
