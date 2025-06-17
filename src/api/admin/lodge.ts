@@ -186,6 +186,8 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
 
+    console.log("Received Data:", {name, address, description, accommodationType, latitude, longitude, roomTypes, keepImgIds});
+
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
     });
@@ -208,7 +210,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       )
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    let result;
+    try {
+    result = await prisma.$transaction(async (tx) => {
       const updated = await tx.hotSpringLodge.update({
         where: { id: Number(id) },
         data: {
@@ -226,21 +230,36 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         imageUrl : img.imageUrl,
         publicId : img.publicId
       }))
+      
+      if(withLodgeId.length > 0) {
+        const createResult = await tx.hotSpringLodgeImage.createMany({
+          data: withLodgeId,
+        });
+        console.log("DB createMany result:", createResult);
+      }
+      
+      const imagesToDelete = await prisma.hotSpringLodgeImage.findMany({
+        where: { lodgeId: Number(id), id: { notIn: keepImgIds } },
+      });
 
-      try {
-        if(withLodgeId.length > 0) {
-          await tx.hotSpringLodgeImage.createMany({
-            data: withLodgeId.map((img) => ({
-              lodgeId: img.lodgeId,
-              imageUrl: img.imageUrl,
-              publicId: img.publicId,
-            })),
-          });
-          console.log("Lodge images uploaded successfully");
-          console.log("Uploaded lodge images:", withLodgeId);
-        }
-      } catch (err) {
-        console.error("Error uploading lodge images:", err);
+      if(imagesToDelete.length > 0) {
+        await Promise.all(
+          imagesToDelete.map((img) => {
+            if (img.publicId) {
+              return deleteFromCloudinary(img.publicId).catch((err) => {
+                console.error(`Failed to delete image ${img.publicId}:`, err);
+              });
+            }
+            return Promise.resolve();
+          })
+        )
+
+        await tx.hotSpringLodgeImage.deleteMany({
+          where: {
+            lodgeId: updated.id,
+            id: { notIn: keepImgIds },
+          },
+        });
       }
 
       const existingRoomTypes = await tx.roomType.findMany({
@@ -258,29 +277,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
       await tx.roomType.deleteMany({
         where: { lodgeId: Number(id) },
-      });
-
-      await tx.hotSpringLodgeImage
-        .findMany({
-          where: { lodgeId: updated.id, id: { notIn: keepImgIds } },
-        })
-        .then(async (imagesToDelete) => {
-          await Promise.all(
-            imagesToDelete.map((img) => {
-              if (img.publicId) {
-                deleteFromCloudinary(img.publicId).catch((err) => {
-                  console.error(`Failed to delete image ${img.publicId}:`, err);
-                });
-              }
-            })
-          );
-        });
-
-      await tx.hotSpringLodgeImage.deleteMany({
-        where: {
-          lodgeId: updated.id,
-          id: { notIn: keepImgIds },
-        },
       });
 
       const createRoomTypes = await Promise.all(
@@ -306,13 +302,20 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                   to: string;
                   basePrice: number;
                   weekendPrice: number;
-                }) => ({
-                  roomTypeId: createdRoom.id,
-                  from: new Date(pricing.from),
-                  to: new Date(pricing.to),
-                  basePrice: pricing.basePrice,
-                  weekendPrice: pricing.weekendPrice,
-                })
+                }) => {
+                  const fromData = new Date(pricing.from);
+                  const toData = new Date(pricing.to);
+                  if (isNaN(fromData.getTime()) || isNaN(toData.getTime())) {
+                    throw new Error("Invalid date format in seasonal pricing");
+                  }
+                  return {
+                    roomTypeId: createdRoom.id,
+                    from: new Date(pricing.from),
+                    to: new Date(pricing.to),
+                    basePrice: pricing.basePrice,
+                    weekendPrice: pricing.weekendPrice,
+                  };
+                }
               ),
             });
           }
@@ -320,12 +323,13 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         })
       );
       return { updated, roomTypes: createRoomTypes };
-    });
+    }); // <-- moved closing brace and parenthesis here
 
     const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
       where: { lodgeId: Number(id) },
     });
     console.log("Lodge images after update:", lodgeImages);
+
     console.log("req.files after update:", files);
 
     res.status(200).json({
@@ -335,8 +339,12 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       uploadedLodgeImages,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Transaction error:", err);
+    throw err;
+  }
+} catch (err) {
+  console.error("Error in lodge update:", err);
+  res.status(500).json({ message: "Internal server error" });
   }
 }) as RequestHandler);
 
