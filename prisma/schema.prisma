@@ -96,7 +96,7 @@ model HotSpringLodgeImage {
   id       Int     @id @default(autoincrement())
   lodgeId  Int
   imageUrl String
-  publicId String?
+  publicId String
 
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
 }
