@@ -193,6 +193,20 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     if (!existingLodge) {
       return res.status(404).json({ message: "Lodge not found" });
     }
+
+    let uploadedLodgeImages: { imageUrl: string; publicId: string }[] = []
+    if(files?.length > 0) {
+      uploadedLodgeImages = await Promise.all(
+        files.map(async (img) => {
+          const {imageUrl, publicId} = await uploadToCloudinary(
+            img.buffer,
+            `lodge_${uuidv4()}`
+          )
+          return { imageUrl, publicId };
+        })
+      )
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const updated = await tx.hotSpringLodge.update({
         where: { id: Number(id) },
@@ -205,6 +219,18 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           accommodationType,
         },
       });
+
+      const withLodgeId = uploadedLodgeImages.map((img) => ({
+        lodgeId : updated.id,
+        imageUrl : img.imageUrl,
+        publicId : img.publicId
+      }))
+
+      if(withLodgeId.length > 0) {
+        await tx.hotSpringLodgeImage.createMany({
+          data: withLodgeId,
+        });
+      }
 
       const existingRoomTypes = await tx.roomType.findMany({
         where: { lodgeId: Number(id) },
@@ -222,26 +248,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       await tx.roomType.deleteMany({
         where: { lodgeId: Number(id) },
       });
-
-      if (files?.length > 0) {
-        const uploadLodgeImages = await Promise.all(
-          files.map(async (image) => {
-            const { imageUrl, publicId } = await uploadToCloudinary(
-              image.buffer,
-              `lodge_${uuidv4()}`
-            );
-            return {
-              lodgeId: updated.id,
-              imageUrl,
-              publicId,
-            };
-          })
-        );
-
-        await tx.hotSpringLodgeImage.createMany({
-          data: uploadLodgeImages,
-        });
-      }
 
       await tx.hotSpringLodgeImage
         .findMany({
