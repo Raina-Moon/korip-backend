@@ -226,10 +226,15 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         publicId : img.publicId
       }))
 
-      if(withLodgeId.length > 0) {
-        await tx.hotSpringLodgeImage.createMany({
-          data: withLodgeId,
-        });
+      try {
+        if(withLodgeId.length > 0) {
+          await tx.hotSpringLodgeImage.createMany({
+            data: withLodgeId,
+          });
+          console.log("Lodge images uploaded successfully");
+        }
+      } catch (err) {
+        console.error("Error uploading lodge images:", err);
       }
 
       const existingRoomTypes = await tx.roomType.findMany({
@@ -310,10 +315,18 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       );
       return { updated, roomTypes: createRoomTypes };
     });
+
+    const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
+      where: { lodgeId: Number(id) },
+    });
+    console.log("Lodge images after update:", lodgeImages);
+    console.log("req.files after update:", files);
+    
     res.status(200).json({
       message: "Lodge updated successfully",
       lodge: result.updated,
       roomTypes: result.roomTypes,
+      uploadedLodgeImages,
     });
   } catch (err) {
     console.error(err);
