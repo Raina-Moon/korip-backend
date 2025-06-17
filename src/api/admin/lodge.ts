@@ -186,6 +186,10 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const files = req.files as Express.Multer.File[];
     const roomTypes = JSON.parse(req.body.roomTypes);
 
+    console.log("Room Types:", roomTypes);
+    console.log("Keep Image IDs:", keepImgIds);
+    console.log("Uploaded Files:", files);
+
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
     });
