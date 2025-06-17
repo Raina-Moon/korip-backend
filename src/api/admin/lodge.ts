@@ -202,6 +202,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             img.buffer,
             `lodge_${uuidv4()}`
           )
+          console.log("Uploaded lodge image:", imageUrl, publicId);
           return { imageUrl, publicId };
         })
       )
@@ -229,9 +230,14 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       try {
         if(withLodgeId.length > 0) {
           await tx.hotSpringLodgeImage.createMany({
-            data: withLodgeId,
+            data: withLodgeId.map((img) => ({
+              lodgeId: img.lodgeId,
+              imageUrl: img.imageUrl,
+              publicId: img.publicId,
+            })),
           });
           console.log("Lodge images uploaded successfully");
+          console.log("Uploaded lodge images:", withLodgeId);
         }
       } catch (err) {
         console.error("Error uploading lodge images:", err);
@@ -321,7 +327,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     });
     console.log("Lodge images after update:", lodgeImages);
     console.log("req.files after update:", files);
-    
+
     res.status(200).json({
       message: "Lodge updated successfully",
       lodge: result.updated,
