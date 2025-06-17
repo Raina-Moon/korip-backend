@@ -186,10 +186,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
 
-    console.log("Room Types:", roomTypes);
-    console.log("Keep Image IDs:", keepImgIds);
-    console.log("Uploaded Files:", files);
-
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
     });
