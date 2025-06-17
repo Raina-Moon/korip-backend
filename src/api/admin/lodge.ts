@@ -182,7 +182,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       accommodationType,
     } = req.body;
 
-    const keepImgIds = JSON.parse(req.body.keepImgIds) || [];
+    const keepImgIds = JSON.parse(req.body.keepImgIds || "[]");
     const files = req.files as Express.Multer.File[];
     const roomTypes = JSON.parse(req.body.roomTypes);
 
