@@ -105,6 +105,7 @@ model RoomTypeImage {
   id         Int    @id @default(autoincrement())
   roomTypeId Int
   imageUrl   String
+  publicId   String
 
   roomType RoomType @relation(fields: [roomTypeId], references: [id])
 }
