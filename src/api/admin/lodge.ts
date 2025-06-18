@@ -105,8 +105,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
               file.originalname.startsWith(`roomType_${index}_`)
             );
 
-            console.log("roomTypeImages", roomTypeImages.map((f) => f.originalname));
-
             if (roomFiles.length > 0) {
               const uploaded = await Promise.all(
                 roomFiles.map(async (file: Express.Multer.File) => {
@@ -141,6 +139,9 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
         return { lodge, roomTypes: createRoomTypes };
       }
     );
+    console.log("Request:",req.body)
+    console.log("Files:", req.files);
+    
     res.status(201).json({ message: "Lodge created successfully", ...result });
   } catch (err) {
     console.error(err);
