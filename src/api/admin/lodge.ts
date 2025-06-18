@@ -8,7 +8,10 @@ import { deleteFromCloudinary } from "../../utils/deleteFromCloudinary";
 const router = express.Router();
 const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
-const uploadMiddleware = upload.array("hotSpringLodgeImages", 30);
+const uploadMiddleware = upload.fields([
+  { name: "hotSpringLodgeImages", maxCount: 30 },
+  { name: "roomTypeImages", maxCount: 100 },
+]);
 
 router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   const { name, address, description, accommodationType } = req.body;
@@ -17,6 +20,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   const hotSpringLodgeImages = (req.files as Express.Multer.File[]) || [];
   const latitude = parseFloat(req.body.latitude);
   const longitude = parseFloat(req.body.longitude);
+  const roomTypeImages = (req.files as Express.Multer.File[]) || [];
 
   if (
     !name ||
@@ -63,7 +67,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
         });
 
         const createRoomTypes = await Promise.all(
-          roomTypes.map(async (roomType) => {
+          roomTypes.map(async (roomType:any, index:number) => {
             const createRoomType = await tx.roomType.create({
               data: {
                 lodgeId: lodge.id,
@@ -96,12 +100,24 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
               });
             }
 
-            if (Array.isArray(roomType.images)) {
+            const roomFiles = roomTypeImages.filter((file:any) => file.originalname.startsWith(`roomType_${index}_`));
+
+            if (roomFiles.length > 0) {
+              const uploaded = await Promise.all(
+                roomFiles.map(async(file: Express.Multer.File) => {
+                  const {imageUrl, publicId} = await uploadToCloudinary(
+                    file.buffer,
+                    `roomType_${index}_${uuidv4()}`
+                  );
+                  return {
+                    roomTypeId: createRoomType.id,
+                    imageUrl,
+                    publicId,
+                  };
+                })
+              );
               await tx.roomTypeImage.createMany({
-                data: roomType.images.map((img: { imageUrl: string }) => ({
-                  roomTypeId: createRoomType.id,
-                  imageUrl: img.imageUrl,
-                })),
+                data: uploaded,
               });
             }
             return createRoomType;
@@ -173,12 +189,7 @@ router.get("/:id", (async (req, res) => {
 router.patch("/:id", uploadMiddleware, (async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      name,
-      address,
-      description,
-      accommodationType,
-    } = req.body;
+    const { name, address, description, accommodationType } = req.body;
 
     const keepImgIds = JSON.parse(req.body.keepImgIds || "[]");
     const files = req.files as Express.Multer.File[];
@@ -194,150 +205,152 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       return res.status(404).json({ message: "Lodge not found" });
     }
 
-    let uploadedLodgeImages: { imageUrl: string; publicId: string }[] = []
-    if(files?.length > 0) {
+    let uploadedLodgeImages: { imageUrl: string; publicId: string }[] = [];
+    if (files?.length > 0) {
       uploadedLodgeImages = await Promise.all(
         files.map(async (img) => {
-          const {imageUrl, publicId} = await uploadToCloudinary(
+          const { imageUrl, publicId } = await uploadToCloudinary(
             img.buffer,
             `lodge_${uuidv4()}`
-          )
+          );
           return { imageUrl, publicId };
         })
-      )
+      );
     }
 
     let result;
     try {
-    result = await prisma.$transaction(async (tx) => {
-      const updated = await tx.hotSpringLodge.update({
-        where: { id: Number(id) },
-        data: {
-          name,
-          address,
-          latitude,
-          longitude,
-          description,
-          accommodationType,
-        },
-      });
-
-      const withLodgeId = uploadedLodgeImages.map((img) => ({
-        lodgeId : updated.id,
-        imageUrl : img.imageUrl,
-        publicId : img.publicId
-      }))
-      
-      if(withLodgeId.length > 0) {
-        const createResult = await tx.hotSpringLodgeImage.createMany({
-          data: withLodgeId,
-        });
-      }
-      
-      const imagesToDelete = await prisma.hotSpringLodgeImage.findMany({
-        where: { lodgeId: Number(id), id: { notIn: keepImgIds } },
-      });
-
-      if(imagesToDelete.length > 0) {
-        await Promise.all(
-          imagesToDelete.map((img) => {
-            if (img.publicId) {
-              return deleteFromCloudinary(img.publicId).catch((err) => {
-                console.error(`Failed to delete image ${img.publicId}:`, err);
-              });
-            }
-            return Promise.resolve();
-          })
-        )
-
-        await tx.hotSpringLodgeImage.deleteMany({
-          where: {
-            lodgeId: updated.id,
-            id: { notIn: keepImgIds },
+      result = await prisma.$transaction(async (tx) => {
+        const updated = await tx.hotSpringLodge.update({
+          where: { id: Number(id) },
+          data: {
+            name,
+            address,
+            latitude,
+            longitude,
+            description,
+            accommodationType,
           },
         });
-      }
 
-      const existingRoomTypes = await tx.roomType.findMany({
-        where: { lodgeId: Number(id) },
-      });
+        const withLodgeId = uploadedLodgeImages.map((img) => ({
+          lodgeId: updated.id,
+          imageUrl: img.imageUrl,
+          publicId: img.publicId,
+        }));
 
-      const roomTypeIds = existingRoomTypes.map((rt) => rt.id);
-      await tx.seasonalPricing.deleteMany({
-        where: { roomTypeId: { in: roomTypeIds } },
-      });
+        if (withLodgeId.length > 0) {
+          const createResult = await tx.hotSpringLodgeImage.createMany({
+            data: withLodgeId,
+          });
+        }
 
-      await tx.roomInventory.deleteMany({
-        where: { lodgeId: Number(id) },
-      });
+        const imagesToDelete = await prisma.hotSpringLodgeImage.findMany({
+          where: { lodgeId: Number(id), id: { notIn: keepImgIds } },
+        });
 
-      await tx.roomType.deleteMany({
-        where: { lodgeId: Number(id) },
-      });
+        if (imagesToDelete.length > 0) {
+          await Promise.all(
+            imagesToDelete.map((img) => {
+              if (img.publicId) {
+                return deleteFromCloudinary(img.publicId).catch((err) => {
+                  console.error(`Failed to delete image ${img.publicId}:`, err);
+                });
+              }
+              return Promise.resolve();
+            })
+          );
 
-      const createRoomTypes = await Promise.all(
-        roomTypes.map(async (roomType: any) => {
-          const createdRoom = await tx.roomType.create({
-            data: {
+          await tx.hotSpringLodgeImage.deleteMany({
+            where: {
               lodgeId: updated.id,
-              name: roomType.name,
-              description: roomType.description,
-              basePrice: roomType.basePrice,
-              weekendPrice: roomType.weekendPrice,
-              maxAdults: roomType.maxAdults,
-              maxChildren: roomType.maxChildren,
-              totalRooms: roomType.totalRooms,
+              id: { notIn: keepImgIds },
             },
           });
+        }
 
-          if (Array.isArray(roomType.seasonalPricing)) {
-            await tx.seasonalPricing.createMany({
-              data: roomType.seasonalPricing.map(
-                (pricing: {
-                  from: string;
-                  to: string;
-                  basePrice: number;
-                  weekendPrice: number;
-                }) => {
-                  const fromData = new Date(pricing.from);
-                  const toData = new Date(pricing.to);
-                  if (isNaN(fromData.getTime()) || isNaN(toData.getTime())) {
-                    throw new Error("Invalid date format in seasonal pricing");
-                  }
-                  return {
-                    roomTypeId: createdRoom.id,
-                    from: new Date(pricing.from),
-                    to: new Date(pricing.to),
-                    basePrice: pricing.basePrice,
-                    weekendPrice: pricing.weekendPrice,
-                  };
-                }
-              ),
+        const existingRoomTypes = await tx.roomType.findMany({
+          where: { lodgeId: Number(id) },
+        });
+
+        const roomTypeIds = existingRoomTypes.map((rt) => rt.id);
+        await tx.seasonalPricing.deleteMany({
+          where: { roomTypeId: { in: roomTypeIds } },
+        });
+
+        await tx.roomInventory.deleteMany({
+          where: { lodgeId: Number(id) },
+        });
+
+        await tx.roomType.deleteMany({
+          where: { lodgeId: Number(id) },
+        });
+
+        const createRoomTypes = await Promise.all(
+          roomTypes.map(async (roomType: any) => {
+            const createdRoom = await tx.roomType.create({
+              data: {
+                lodgeId: updated.id,
+                name: roomType.name,
+                description: roomType.description,
+                basePrice: roomType.basePrice,
+                weekendPrice: roomType.weekendPrice,
+                maxAdults: roomType.maxAdults,
+                maxChildren: roomType.maxChildren,
+                totalRooms: roomType.totalRooms,
+              },
             });
-          }
-          return createdRoom;
-        })
-      );
-      return { updated, roomTypes: createRoomTypes };
-    }); // <-- moved closing brace and parenthesis here
 
-    const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
-      where: { lodgeId: Number(id) },
-    });
+            if (Array.isArray(roomType.seasonalPricing)) {
+              await tx.seasonalPricing.createMany({
+                data: roomType.seasonalPricing.map(
+                  (pricing: {
+                    from: string;
+                    to: string;
+                    basePrice: number;
+                    weekendPrice: number;
+                  }) => {
+                    const fromData = new Date(pricing.from);
+                    const toData = new Date(pricing.to);
+                    if (isNaN(fromData.getTime()) || isNaN(toData.getTime())) {
+                      throw new Error(
+                        "Invalid date format in seasonal pricing"
+                      );
+                    }
+                    return {
+                      roomTypeId: createdRoom.id,
+                      from: new Date(pricing.from),
+                      to: new Date(pricing.to),
+                      basePrice: pricing.basePrice,
+                      weekendPrice: pricing.weekendPrice,
+                    };
+                  }
+                ),
+              });
+            }
+            return createdRoom;
+          })
+        );
+        return { updated, roomTypes: createRoomTypes };
+      }); // <-- moved closing brace and parenthesis here
 
-    res.status(200).json({
-      message: "Lodge updated successfully",
-      lodge: result.updated,
-      roomTypes: result.roomTypes,
-      uploadedLodgeImages,
-    });
+      const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
+        where: { lodgeId: Number(id) },
+      });
+
+      res.status(200).json({
+        message: "Lodge updated successfully",
+        lodge: result.updated,
+        roomTypes: result.roomTypes,
+        uploadedLodgeImages,
+      });
+    } catch (err) {
+      console.error("Transaction error:", err);
+      throw err;
+    }
   } catch (err) {
-    console.error("Transaction error:", err);
-    throw err;
-  }
-} catch (err) {
-  console.error("Error in lodge update:", err);
-  res.status(500).json({ message: "Internal server error" });
+    console.error("Error in lodge update:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 }) as RequestHandler);
 
