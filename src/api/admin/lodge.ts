@@ -17,10 +17,11 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   const { name, address, description, accommodationType } = req.body;
 
   const roomTypes = JSON.parse(req.body.roomTypes);
-  const hotSpringLodgeImages = (req.files as Express.Multer.File[]) || [];
   const latitude = parseFloat(req.body.latitude);
   const longitude = parseFloat(req.body.longitude);
-  const roomTypeImages = (req.files as Express.Multer.File[]) || [];
+  const { hotSpringLodgeImages = [], roomTypeImages = [] } = req.files as {
+    [key: string]: Express.Multer.File[];
+  };
 
   if (
     !name ||
@@ -67,7 +68,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
         });
 
         const createRoomTypes = await Promise.all(
-          roomTypes.map(async (roomType:any, index:number) => {
+          roomTypes.map(async (roomType: any, index: number) => {
             const createRoomType = await tx.roomType.create({
               data: {
                 lodgeId: lodge.id,
@@ -100,12 +101,16 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
               });
             }
 
-            const roomFiles = roomTypeImages.filter((file:any) => file.originalname.startsWith(`roomType_${index}_`));
+            const roomFiles = roomTypeImages.filter((file: any) =>
+              file.originalname.startsWith(`roomType_${index}_`)
+            );
+
+            console.log("roomTypeImages", roomTypeImages.map((f) => f.originalname));
 
             if (roomFiles.length > 0) {
               const uploaded = await Promise.all(
-                roomFiles.map(async(file: Express.Multer.File) => {
-                  const {imageUrl, publicId} = await uploadToCloudinary(
+                roomFiles.map(async (file: Express.Multer.File) => {
+                  const { imageUrl, publicId } = await uploadToCloudinary(
                     file.buffer,
                     `roomType_${index}_${uuidv4()}`
                   );
