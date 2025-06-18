@@ -186,8 +186,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
 
-    console.log("Received Data:", {name, address, description, accommodationType, latitude, longitude, roomTypes, keepImgIds});
-
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
     });
@@ -204,7 +202,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             img.buffer,
             `lodge_${uuidv4()}`
           )
-          console.log("Uploaded lodge image:", imageUrl, publicId);
           return { imageUrl, publicId };
         })
       )
@@ -235,7 +232,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         const createResult = await tx.hotSpringLodgeImage.createMany({
           data: withLodgeId,
         });
-        console.log("DB createMany result:", createResult);
       }
       
       const imagesToDelete = await prisma.hotSpringLodgeImage.findMany({
@@ -328,9 +324,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
       where: { lodgeId: Number(id) },
     });
-    console.log("Lodge images after update:", lodgeImages);
-
-    console.log("req.files after update:", files);
 
     res.status(200).json({
       message: "Lodge updated successfully",
