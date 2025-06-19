@@ -50,7 +50,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   );
 
   const uploadRoomTypeImages = await Promise.all(
-    roomTypes.map(async (roomType, idx) => {
+    roomTypes.map(async (_, idx) => {
       const roomFiles = roomTypeImages.filter((file: any) =>
         file.originalname.startsWith(`roomType_${idx}_`)
       );
