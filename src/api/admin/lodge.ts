@@ -36,6 +36,40 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
+  const uploadLodgeImages = await Promise.all(
+    hotSpringLodgeImages.map(async (image) => {
+      const { imageUrl, publicId } = await uploadToCloudinary(
+        image.buffer,
+        `lodge_${uuidv4()}`
+      );
+      return {
+        imageUrl,
+        publicId,
+      };
+    })
+  );
+
+  const uploadRoomTypeImages = await Promise.all(
+    roomTypes.map(async (roomType, idx) => {
+      const roomFiles = roomTypeImages.filter((file: any) =>
+        file.originalname.startsWith(`roomType_${idx}_`)
+      );
+
+      if (roomFiles.length === 0) return [];
+
+      const uploaded = await Promise.all(
+        roomFiles.map(async (file) => {
+          const { imageUrl, publicId } = await uploadToCloudinary(
+            file.buffer,
+            `roomType_${idx}_${uuidv4()}`
+          );
+          return { idx, imageUrl, publicId };
+        })
+      );
+      return uploaded;
+    })
+  );
+
   try {
     const result = await prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -50,23 +84,15 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
           },
         });
 
-        const uploadLodgeImages = await Promise.all(
-          hotSpringLodgeImages.map(async (image) => {
-            const { imageUrl, publicId } = await uploadToCloudinary(
-              image.buffer,
-              `lodge_${uuidv4()}`
-            );
-            return {
+        if (uploadLodgeImages.length > 0) {
+          await tx.hotSpringLodgeImage.createMany({
+            data: uploadLodgeImages.map((img) => ({
               lodgeId: lodge.id,
-              imageUrl,
-              publicId,
-            };
-          })
-        );
-
-        await tx.hotSpringLodgeImage.createMany({
-          data: uploadLodgeImages,
-        });
+              imageUrl: img.imageUrl,
+              publicId: img.publicId,
+            })),
+          });
+        }
 
         const createRoomTypes = await Promise.all(
           roomTypes.map(async (roomType: any, index: number) => {
@@ -102,28 +128,17 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
               });
             }
 
-            const roomFiles = roomTypeImages.filter((file: any) =>
-              file.originalname.startsWith(`roomType_${index}_`)
-            );
-
-            if (roomFiles.length > 0) {
-              const uploaded = await Promise.all(
-                roomFiles.map(async (file: Express.Multer.File) => {
-                  const { imageUrl, publicId } = await uploadToCloudinary(
-                    file.buffer,
-                    `roomType_${index}_${uuidv4()}`
-                  );
-                  return {
-                    roomTypeId: createRoomType.id,
-                    imageUrl,
-                    publicId,
-                  };
-                })
-              );
+            const images = uploadRoomTypeImages[index];
+            if (images && images.length > 0) {
               await tx.roomTypeImage.createMany({
-                data: uploaded,
+                data: images.map((img) => ({
+                  roomTypeId: createRoomType.id,
+                  imageUrl: img.imageUrl,
+                  publicId: img.publicId,
+                })),
               });
             }
+
             return createRoomType;
           })
         );
