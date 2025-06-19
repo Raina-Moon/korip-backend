@@ -30,6 +30,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
     longitude === 0 ||
     !accommodationType ||
     !Array.isArray(roomTypes) ||
+    roomTypes.length === 0 ||
     hotSpringLodgeImages.length === 0
   ) {
     return res.status(400).json({ message: "All fields are required" });
@@ -139,9 +140,9 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
         return { lodge, roomTypes: createRoomTypes };
       }
     );
-    console.log("Request:",req.body)
+    console.log("Request:", req.body);
     console.log("Files:", req.files);
-    
+
     res.status(201).json({ message: "Lodge created successfully", ...result });
   } catch (err) {
     console.error(err);
@@ -209,6 +210,16 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
     if (!existingLodge) {
       return res.status(404).json({ message: "Lodge not found" });
+    }
+
+    if (
+      !name ||
+      !address ||
+      !accommodationType ||
+      !Array.isArray(roomTypes) ||
+      roomTypes.length === 0
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
     }
 
     let uploadedLodgeImages: { imageUrl: string; publicId: string }[] = [];
