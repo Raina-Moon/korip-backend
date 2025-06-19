@@ -269,9 +269,8 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       });
     }}
 
-    let result;
     try {
-      result = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         const updated = await tx.hotSpringLodge.update({
           where: { id: Number(id) },
           data: {
@@ -424,14 +423,23 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           });
         }
 
-        return { updated, roomTypes: createRoomTypes };
+        return { updated, roomTypes: createRoomTypes,uploadedLodgeImages };
       }); // <-- moved closing brace and parenthesis here
+
+      const roomTypeImages = await prisma.roomTypeImage.findMany({
+        where: {
+          roomTypeId: {
+            in: result.roomTypes.map((rt) => rt.id),
+          },
+        }
+      })
 
       res.status(200).json({
         message: "Lodge updated successfully",
         lodge: result.updated,
         roomTypes: result.roomTypes,
-        uploadedLodgeImages,
+        uploadedLodgeImages: result.uploadedLodgeImages,
+        roomTypeImages,
       });
     } catch (err) {
       console.error("Transaction error:", err);
