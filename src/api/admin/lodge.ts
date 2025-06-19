@@ -218,6 +218,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const roomTypes = JSON.parse(req.body.roomTypes);
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
+    const keepRoomTypeImgIds = JSON.parse(req.body.keepRoomTypeImgIds || "[]");
+    const filesByField = req.files as {[fieldname : string]: Express.Multer.File[]};
+    const roomTypeImageFiles = filesByField["roomTypeImages"] || [];
 
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
@@ -250,6 +253,22 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       );
     }
 
+    const roomTypeImageUpload: { idx: number; imageUrl: string; publicId: string }[] = [];
+    if (Array.isArray(roomTypes) && roomTypeImageFiles.length > 0) {
+      for(let i = 0; i < roomTypes.length; i++) {
+      const files = roomTypeImageFiles.filter((_, idx) => Math.floor(idx / 100) === i);
+      const uploads = await Promise.all(
+        files.map((file) => uploadToCloudinary(file.buffer, `roomType_${i}_${uuidv4()}`))
+      );
+      uploads.forEach((upload) => {
+        roomTypeImageUpload.push({
+          idx: i,
+          imageUrl: upload.imageUrl,
+          publicId: upload.publicId,
+        });
+      });
+    }}
+
     let result;
     try {
       result = await prisma.$transaction(async (tx) => {
@@ -272,7 +291,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         }));
 
         if (withLodgeId.length > 0) {
-          const createResult = await tx.hotSpringLodgeImage.createMany({
+          await tx.hotSpringLodgeImage.createMany({
             data: withLodgeId,
           });
         }
@@ -363,12 +382,50 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             return createdRoom;
           })
         );
+
+        const existingRoomTypeImages = await tx.roomTypeImage.findMany({
+          where: {
+            roomTypeId : {
+              in : createRoomTypes.map(rt => rt.id)
+            }
+          }
+        })
+
+        const roomTypeImagesToDelete = existingRoomTypeImages.filter(
+          (img) => !keepRoomTypeImgIds.includes(img.id)
+        )
+
+        await Promise.all(
+          roomTypeImagesToDelete.map((img) => {
+            if (img.publicId) {
+              return deleteFromCloudinary(img.publicId).catch((err) => {
+                console.error(`Failed to delete image ${img.publicId}:`, err);
+              });
+            }
+            return Promise.resolve();
+          })
+        );
+
+        await tx.roomTypeImage.deleteMany({
+          where: {
+            id: { in: roomTypeImagesToDelete.map((img) => img.id) },
+          },
+        });
+
+        const roomTypeImageData = roomTypeImageUpload.map((img) => ({
+          roomTypeId: createRoomTypes[img.idx].id,
+          imageUrl: img.imageUrl,
+          publicId: img.publicId,
+        }));
+
+        if (roomTypeImageData.length > 0) {
+          await tx.roomTypeImage.createMany({
+            data: roomTypeImageData,
+          });
+        }
+
         return { updated, roomTypes: createRoomTypes };
       }); // <-- moved closing brace and parenthesis here
-
-      const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
-        where: { lodgeId: Number(id) },
-      });
 
       res.status(200).json({
         message: "Lodge updated successfully",
