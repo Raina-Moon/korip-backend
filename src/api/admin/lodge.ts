@@ -332,6 +332,13 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           where: { lodgeId: Number(id) },
         });
 
+        await tx.roomTypeImage.deleteMany({
+          where: {
+            roomTypeId: { in: roomTypeIds },
+            id: { notIn: keepRoomTypeImgIds },
+          },
+        });
+
         await tx.roomType.deleteMany({
           where: { lodgeId: Number(id) },
         });
