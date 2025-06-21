@@ -6,96 +6,106 @@ import { asyncHandler } from "../utils/asyncHandler";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post("/:id/review", authToken, asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
-  const { rating, comment } = req.body;
-  const userId = req.user?.userId;
-  try {
-    const lodge = await prisma.hotSpringLodge.findUnique({
-      where: { id: Number(id) },
-    });
+router.post(
+  "/:id/review",
+  authToken,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user?.userId;
+    try {
+      const lodge = await prisma.hotSpringLodge.findUnique({
+        where: { id: Number(id) },
+      });
 
-    if (!lodge) {
-      return res.status(404).json({ message: "Lodge not found" });
+      if (!lodge) {
+        return res.status(404).json({ message: "Lodge not found" });
+      }
+
+      const existingReview = await prisma.hotSpringLodgeReview.findFirst({
+        where: {
+          lodgeId: lodge.id,
+          userId: userId!,
+        },
+      });
+      if (existingReview) {
+        return res
+          .status(400)
+          .json({ message: "You have already reviewed this lodge" });
+      }
+
+      const newReview = await prisma.hotSpringLodgeReview.create({
+        data: {
+          lodgeId: lodge.id,
+          userId: userId!,
+          rating,
+          comment,
+        },
+        include: {
+          lodge: true,
+          user: true,
+        },
+      });
+
+      res.status(201).json(newReview);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
     }
+  })
+);
 
-    const existingReview = await prisma.hotSpringLodgeReview.findFirst({
-      where: {
-        lodgeId: lodge.id,
-        userId: userId!,
-      },
-    });
-    if (existingReview) {
-      return res
-        .status(400)
-        .json({ message: "You have already reviewed this lodge" });
-    }
-
-    const newReview = await prisma.hotSpringLodgeReview.create({
-      data: {
-        lodgeId: lodge.id,
-        userId: userId!,
-        rating,
-        comment,
-      },
-      include: {
-        lodge: true,
-        user: true,
-      },
-    });
-
-    res.status(201).json(newReview);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-}));
-
-router.get("/:id/reviews", asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  try {
-    const reviews = await prisma.hotSpringLodgeReview.findMany({
-      where: { lodgeId: Number(id) },
-      include: {
-        user: {
-          select: {
-            nickname: true,
+router.get(
+  "/:id/reviews",
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    try {
+      const reviews = await prisma.hotSpringLodgeReview.findMany({
+        where: { lodgeId: Number(id) },
+        include: {
+          user: {
+            select: {
+              nickname: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    res.status(200).json(reviews);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-}));
-
-router.get("/:id", asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const lodge = await prisma.hotSpringLodge.findUnique({
-      where: { id: Number(id) },
-      include: {
-        images: true,
-        details: true,
-      },
-    });
-
-    if (!lodge) {
-      return res.status(404).json({ message: "Lodge not found" });
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+      res.status(200).json(reviews);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
     }
+  })
+);
 
-    res.status(200).json(lodge);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-}));
+router.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const lodge = await prisma.hotSpringLodge.findUnique({
+        where: { id: Number(id) },
+        include: {
+          images: true,
+          details: true,
+        },
+      });
+
+      if (!lodge) {
+        return res.status(404).json({ message: "Lodge not found" });
+      }
+
+      res.status(200).json(lodge);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
 
 router.get("/", async (req, res) => {
   const { name, address, description, accommodationType } = req.query;
@@ -128,5 +138,96 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
+router.get(
+  "/search",
+  asyncHandler(async (req, res) => {
+    const { region, checkIn, checkOut, adults, children, accommodationType } =
+      req.query;
+
+    if (!checkIn || !checkOut || !adults || !children) {
+      return res
+        .status(400)
+        .json({ message: "Missing required search parameters" });
+    }
+
+    const checkInDate = new Date(String(checkIn));
+    const checkOutDate = new Date(String(checkOut));
+    const adultsNum = parseInt(String(adults)) || 1;
+    const childrenNum = parseInt(String(children)) || 0;
+
+    try {
+      const lodges = await prisma.hotSpringLodge.findMany({
+        where: {
+          address: region !== "All" ? { contains: String(region) } : undefined,
+          roomTypes: {
+            some: {
+              maxAdults: {
+                gte: adultsNum,
+              },
+              maxChildren: {
+                gte: childrenNum,
+              },
+              inventories: {
+                some: {
+                  date: {
+                    gte: checkInDate,
+                    lt: checkOutDate,
+                  },
+                  availableRooms: {
+                    gte: 0,
+                  },
+                },
+              },
+            },
+          },
+        },
+        include: {
+          images: true,
+          roomTypes: {
+            where: {
+              maxAdults: {
+                gte: adultsNum,
+              },
+              maxChildren: {
+                gte: childrenNum,
+              },
+              inventories: {
+                some: {
+                  date: {
+                    gte: checkInDate,
+                    lt: checkOutDate,
+                  },
+                  availableRooms: {
+                    gte: 0,
+                  },
+                },
+              },
+            },
+            include: {
+              images: true,
+              inventories: {
+                where: {
+                  date: {
+                    gte: checkInDate,
+                    lt: checkOutDate,
+                  },
+                  availableRooms: {
+                    gte: 0,
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      res.status(200).json(lodges);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
 
 export default router;
