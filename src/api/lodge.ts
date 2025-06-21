@@ -28,7 +28,7 @@ router.get(
       const lodges = await prisma.hotSpringLodge.findMany({
         where: {
           address: region !== "All" ? { startsWith: String(region) } : undefined,
-          accommodationType: accommodationTypeStr !== "All" ? accommodationTypeStr : undefined,
+          accommodationType: accommodationTypeStr !== "전체" ? String(accommodationTypeStr) : undefined,
           roomTypes: {
             some: {
               maxAdults: {
