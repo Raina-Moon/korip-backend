@@ -1,10 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import express from "express";
+import { asyncHandler } from "../../utils/asyncHandler";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post("/", async (req, res) => {
+router.post("/", asyncHandler(async (req, res) => {
   try {
     const {
       lodgeId,
@@ -47,9 +48,9 @@ router.post("/", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, basePrice, maxAdults, maxChildren, totalRooms } =
@@ -80,9 +81,9 @@ router.patch("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const roomType = await prisma.roomType.findUnique({
@@ -99,7 +100,7 @@ router.delete("/:id", async (req, res) => {
     console.error(err);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 router.get("/", async (_req, res) => {
   const { lodgeId } = _req.query;

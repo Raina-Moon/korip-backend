@@ -62,19 +62,19 @@ model HotSpringLodge {
   description       String?
   accommodationType String
 
-  HotSpringLodgeReview HotSpringLodgeReview[]
+  reviews HotSpringLodgeReview[]
 
-  HotSpringLodgeImage HotSpringLodgeImage[]
+  images HotSpringLodgeImage[]
 
-  HotSpringLodgeBookmark HotSpringLodgeBookmark[]
+  bookmarks HotSpringLodgeBookmark[]
 
-  HotSpringLodgeDetail HotSpringLodgeDetail[]
+  details HotSpringLodgeDetail[]
 
-  Reservation Reservation[]
+  reservations Reservation[]
 
-  RoomInventory RoomInventory[]
+  inventories RoomInventory[]
 
-  RoomType RoomType[]
+  roomTypes RoomType[]
 }
 
 model HotSpringLodgeReview {
@@ -89,15 +89,25 @@ model HotSpringLodgeReview {
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
   user  User           @relation(fields: [userId], references: [id])
 
-  ReportReview ReportReview[]
+  reports ReportReview[]
 }
 
 model HotSpringLodgeImage {
-  id       Int    @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
   lodgeId  Int
   imageUrl String
+  publicId String
 
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
+}
+
+model RoomTypeImage {
+  id         Int    @id @default(autoincrement())
+  roomTypeId Int
+  imageUrl   String
+  publicId   String
+
+  roomType RoomType @relation(fields: [roomTypeId], references: [id])
 }
 
 model HotSpringLodgeBookmark {
@@ -147,49 +157,47 @@ model Reservation {
   roomType   RoomType @relation(fields: [roomTypeId], references: [id])
 }
 
-enum PriceType {
-  WEEKDAY
-  WEEKEND
-  PEAK
-  OFF
-}
-
-model RoomPricing {
-  id         Int       @id @default(autoincrement())
-  roomTypeId Int
-  date       DateTime
-  price      Int
-  priceType  PriceType
+model SeasonalPricing {
+  id           Int      @id @default(autoincrement())
+  roomTypeId   Int
+  from         DateTime
+  to           DateTime
+  basePrice    Int      @default(0)
+  weekendPrice Int      @default(0)
 
   roomType RoomType @relation(fields: [roomTypeId], references: [id])
 }
 
 model RoomInventory {
-  id             Int      @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   lodgeId        Int
   roomTypeId     Int
-  date           DateTime
+  totalRooms     Int
   availableRooms Int
+  date           DateTime?
 
   lodge    HotSpringLodge @relation(fields: [lodgeId], references: [id])
   roomType RoomType       @relation(fields: [roomTypeId], references: [id])
 }
 
 model RoomType {
-  id          Int     @id @default(autoincrement())
-  lodgeId     Int
-  name        String // e.g., "Standard", "Deluxe", "Suite"
-  description String?
-  basePrice   Int
-  maxAdults   Int
-  maxChildren Int
-  totalRooms  Int
+  id           Int     @id @default(autoincrement())
+  lodgeId      Int
+  name         String // e.g., "Standard", "Deluxe", "Suite"
+  description  String?
+  basePrice    Int
+  weekendPrice Int?
+  maxAdults    Int
+  maxChildren  Int
+  totalRooms   Int
 
-  lodge        HotSpringLodge @relation(fields: [lodgeId], references: [id])
-  reservations Reservation[]
-  RoomPricing  RoomPricing[]
+  lodge           HotSpringLodge    @relation(fields: [lodgeId], references: [id])
+  reservations    Reservation[]
+  seasonalPricing SeasonalPricing[]
 
-  RoomInventory RoomInventory[]
+  inventories RoomInventory[]
+
+  images RoomTypeImage[]
 }
 
 model ReportReview {

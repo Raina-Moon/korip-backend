@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import express from "express";
+import { asyncHandler } from "../../utils/asyncHandler";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -27,7 +28,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.delete("/review/:reviewId", async (req, res) => {
+router.delete("/review/:reviewId", asyncHandler(async (req, res) => {
   const { reviewId } = req.params;
   try {
     const existingReview = await prisma.hotSpringLodgeReview.findUnique({
@@ -50,7 +51,7 @@ router.delete("/review/:reviewId", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 router.patch("/review/:reviewId/hide", async (req, res) => {
   const { reviewId } = req.params;

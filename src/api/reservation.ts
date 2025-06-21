@@ -1,11 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import express from "express";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post("/", authToken, async (req: AuthRequest, res) => {
+router.post("/", authToken, asyncHandler(async (req: AuthRequest, res) => {
   const {
     lodgeId,
     roomTypeId,
@@ -87,7 +88,7 @@ router.post("/", authToken, async (req: AuthRequest, res) => {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
-});
+}));
 
 router.get("/", authToken, async (req: AuthRequest, res) => {
   const userId = req.user?.userId;

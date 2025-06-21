@@ -1,44 +1,9 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
+import { asyncHandler } from "../../utils/asyncHandler";
 
 const router = express.Router();
 const prisma = new PrismaClient();
-
-router.post("/", async (req, res) => {
-  try {
-    const { lodgeId, roomTypeId, date, availableRooms } = req.body;
-    if (!lodgeId || !roomTypeId || !date || availableRooms === undefined) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-    const existingInventory = await prisma.roomInventory.findFirst({
-      where: {
-        lodgeId,
-        roomTypeId,
-        date: new Date(date),
-      },
-    });
-    if (existingInventory) {
-      return res
-        .status(400)
-        .json({ message: "Inventory for this date already exists" });
-    }
-    const updatedInventory = await prisma.roomInventory.create({
-      data: {
-        lodgeId,
-        roomTypeId,
-        date: new Date(date),
-        availableRooms,
-      },
-    });
-    res.status(201).json({
-      message: "Room inventory created successfully",
-      updatedInventory,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
 
 router.get("/", async (req, res) => {
     const { lodgeId, roomTypeId } = req.query;
@@ -60,7 +25,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { date, availableRooms } = req.body;
   try {
@@ -87,9 +52,9 @@ router.patch("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", asyncHandler(async (req, res) => {
   const { id } = req.params;
   try {
     const existingInventory = await prisma.roomInventory.findUnique({
@@ -106,6 +71,6 @@ router.delete("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 export default router;
