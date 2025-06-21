@@ -22,11 +22,12 @@ router.get(
     const checkOutDate = new Date(String(checkOut));
     const adultsNum = parseInt(String(adults)) || 1;
     const childrenNum = parseInt(String(children)) || 0;
+    const accommodationTypeStr = String(accommodationType) || "All";
 
     try {
       const lodges = await prisma.hotSpringLodge.findMany({
         where: {
-          address: region !== "All" ? { contains: String(region) } : undefined,
+          address: region !== "All" ? { startsWith: String(region) } : undefined,
           roomTypes: {
             some: {
               maxAdults: {
