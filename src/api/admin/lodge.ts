@@ -214,13 +214,13 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const { name, address, description, accommodationType } = req.body;
 
     const keepImgIds = JSON.parse(req.body.keepImgIds || "[]");
-    const files = req.files as Express.Multer.File[];
     const roomTypes = JSON.parse(req.body.roomTypes);
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
     const keepRoomTypeImgIds = JSON.parse(req.body.keepRoomTypeImgIds || "[]");
     const filesByField = req.files as {[fieldname : string]: Express.Multer.File[]};
     const roomTypeImageFiles = filesByField["roomTypeImages"] || [];
+    const lodgeImageFiles = filesByField["hotSpringLodgeImages"] || [];
 
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
@@ -241,9 +241,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     }
 
     let uploadedLodgeImages: { imageUrl: string; publicId: string }[] = [];
-    if (files?.length > 0) {
+    if (lodgeImageFiles?.length > 0) {
       uploadedLodgeImages = await Promise.all(
-        files.map(async (img) => {
+        lodgeImageFiles.map(async (img) => {
           const { imageUrl, publicId } = await uploadToCloudinary(
             img.buffer,
             `lodge_${uuidv4()}`
