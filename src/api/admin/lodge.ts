@@ -143,13 +143,30 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
           })
         );
 
-        await tx.roomInventory.createMany({
-          data: createRoomTypes.map((roomType) => ({
+        const generateDates = (days: number) => {
+          const dates: Date[] = [];
+          const today = new Date();
+          for (let i = 0; i < days; i++) {
+            const nextDate = new Date(today);
+            nextDate.setDate(today.getDate() + i);
+            dates.push(nextDate);
+          }
+          return dates;
+        };
+        const dates = generateDates(365);
+
+        const inventoryData = createRoomTypes.flatMap((roomType) =>
+          dates.map((date) => ({
             lodgeId: lodge.id,
             roomTypeId: roomType.id,
+            date,
             totalRooms: roomType.totalRooms,
             availableRooms: roomType.totalRooms,
-          })),
+          }))
+        );
+
+        await tx.roomInventory.createMany({
+          data: inventoryData,
         });
 
         return { lodge, roomTypes: createRoomTypes };
@@ -218,7 +235,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
     const keepRoomTypeImgIds = JSON.parse(req.body.keepRoomTypeImgIds || "[]");
-    const filesByField = req.files as {[fieldname : string]: Express.Multer.File[]};
+    const filesByField = req.files as {
+      [fieldname: string]: Express.Multer.File[];
+    };
     const roomTypeImageFiles = filesByField["roomTypeImages"] || [];
     const lodgeImageFiles = filesByField["hotSpringLodgeImages"] || [];
 
@@ -253,21 +272,30 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       );
     }
 
-    const roomTypeImageUpload: { idx: number; imageUrl: string; publicId: string }[] = [];
+    const roomTypeImageUpload: {
+      idx: number;
+      imageUrl: string;
+      publicId: string;
+    }[] = [];
     if (Array.isArray(roomTypes) && roomTypeImageFiles.length > 0) {
-      for(let i = 0; i < roomTypes.length; i++) {
-      const files = roomTypeImageFiles.filter((_, idx) => Math.floor(idx / 100) === i);
-      const uploads = await Promise.all(
-        files.map((file) => uploadToCloudinary(file.buffer, `roomType_${i}_${uuidv4()}`))
-      );
-      uploads.forEach((upload) => {
-        roomTypeImageUpload.push({
-          idx: i,
-          imageUrl: upload.imageUrl,
-          publicId: upload.publicId,
+      for (let i = 0; i < roomTypes.length; i++) {
+        const files = roomTypeImageFiles.filter(
+          (_, idx) => Math.floor(idx / 100) === i
+        );
+        const uploads = await Promise.all(
+          files.map((file) =>
+            uploadToCloudinary(file.buffer, `roomType_${i}_${uuidv4()}`)
+          )
+        );
+        uploads.forEach((upload) => {
+          roomTypeImageUpload.push({
+            idx: i,
+            imageUrl: upload.imageUrl,
+            publicId: upload.publicId,
+          });
         });
-      });
-    }}
+      }
+    }
 
     try {
       const result = await prisma.$transaction(async (tx) => {
@@ -391,15 +419,15 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
         const existingRoomTypeImages = await tx.roomTypeImage.findMany({
           where: {
-            roomTypeId : {
-              in : createRoomTypes.map(rt => rt.id)
-            }
-          }
-        })
+            roomTypeId: {
+              in: createRoomTypes.map((rt) => rt.id),
+            },
+          },
+        });
 
         const roomTypeImagesToDelete = existingRoomTypeImages.filter(
           (img) => !keepRoomTypeImgIds.includes(img.id)
-        )
+        );
 
         await Promise.all(
           roomTypeImagesToDelete.map((img) => {
@@ -430,7 +458,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           });
         }
 
-        return { updated, roomTypes: createRoomTypes,uploadedLodgeImages };
+        return { updated, roomTypes: createRoomTypes, uploadedLodgeImages };
       }); // <-- moved closing brace and parenthesis here
 
       const roomTypeImages = await prisma.roomTypeImage.findMany({
@@ -438,8 +466,8 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           roomTypeId: {
             in: result.roomTypes.map((rt) => rt.id),
           },
-        }
-      })
+        },
+      });
 
       res.status(200).json({
         message: "Lodge updated successfully",
