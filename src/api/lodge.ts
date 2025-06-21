@@ -6,6 +6,97 @@ import { asyncHandler } from "../utils/asyncHandler";
 const router = express.Router();
 const prisma = new PrismaClient();
 
+router.get(
+  "/search",
+  asyncHandler(async (req, res) => {
+    const { region, checkIn, checkOut, adults, children, accommodationType } =
+      req.query;
+
+    if (!checkIn || !checkOut || !adults) {
+      return res
+        .status(400)
+        .json({ message: "Missing required search parameters" });
+    }
+
+    const checkInDate = new Date(String(checkIn));
+    const checkOutDate = new Date(String(checkOut));
+    const adultsNum = parseInt(String(adults)) || 1;
+    const childrenNum = parseInt(String(children)) || 0;
+
+    try {
+      const lodges = await prisma.hotSpringLodge.findMany({
+        where: {
+          address: region !== "All" ? { contains: String(region) } : undefined,
+          roomTypes: {
+            some: {
+              maxAdults: {
+                gte: adultsNum,
+              },
+              maxChildren: {
+                gte: childrenNum,
+              },
+              inventories: {
+                some: {
+                  date: {
+                    gte: checkInDate,
+                    lt: checkOutDate,
+                  },
+                  availableRooms: {
+                    gte: 0,
+                  },
+                },
+              },
+            },
+          },
+        },
+        include: {
+          images: true,
+          roomTypes: {
+            where: {
+              maxAdults: {
+                gte: adultsNum,
+              },
+              maxChildren: {
+                gte: childrenNum,
+              },
+              inventories: {
+                some: {
+                  date: {
+                    gte: checkInDate,
+                    lt: checkOutDate,
+                  },
+                  availableRooms: {
+                    gte: 0,
+                  },
+                },
+              },
+            },
+            include: {
+              images: true,
+              inventories: {
+                where: {
+                  date: {
+                    gte: checkInDate,
+                    lt: checkOutDate,
+                  },
+                  availableRooms: {
+                    gte: 0,
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      res.status(200).json(lodges);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
 router.post(
   "/:id/review",
   authToken,
@@ -139,95 +230,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get(
-  "/search",
-  asyncHandler(async (req, res) => {
-    const { region, checkIn, checkOut, adults, children, accommodationType } =
-      req.query;
 
-    if (!checkIn || !checkOut || !adults || !children) {
-      return res
-        .status(400)
-        .json({ message: "Missing required search parameters" });
-    }
-
-    const checkInDate = new Date(String(checkIn));
-    const checkOutDate = new Date(String(checkOut));
-    const adultsNum = parseInt(String(adults)) || 1;
-    const childrenNum = parseInt(String(children)) || 0;
-
-    try {
-      const lodges = await prisma.hotSpringLodge.findMany({
-        where: {
-          address: region !== "All" ? { contains: String(region) } : undefined,
-          roomTypes: {
-            some: {
-              maxAdults: {
-                gte: adultsNum,
-              },
-              maxChildren: {
-                gte: childrenNum,
-              },
-              inventories: {
-                some: {
-                  date: {
-                    gte: checkInDate,
-                    lt: checkOutDate,
-                  },
-                  availableRooms: {
-                    gte: 0,
-                  },
-                },
-              },
-            },
-          },
-        },
-        include: {
-          images: true,
-          roomTypes: {
-            where: {
-              maxAdults: {
-                gte: adultsNum,
-              },
-              maxChildren: {
-                gte: childrenNum,
-              },
-              inventories: {
-                some: {
-                  date: {
-                    gte: checkInDate,
-                    lt: checkOutDate,
-                  },
-                  availableRooms: {
-                    gte: 0,
-                  },
-                },
-              },
-            },
-            include: {
-              images: true,
-              inventories: {
-                where: {
-                  date: {
-                    gte: checkInDate,
-                    lt: checkOutDate,
-                  },
-                  availableRooms: {
-                    gte: 0,
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      res.status(200).json(lodges);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  })
-);
 
 export default router;
