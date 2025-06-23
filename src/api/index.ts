@@ -6,6 +6,7 @@ import resetPasswordRouter from "./reset-password";
 import hotspringRouter from "./hotspring";
 import reviewRouter from "./review";
 import lodgeRouter from "./lodge";
+import reservationRouter from "./reservation";
 
 const router = express.Router();
 
@@ -16,5 +17,6 @@ router.use("/reset-password", resetPasswordRouter);
 router.use("/hotspring", hotspringRouter);
 router.use("/review",reviewRouter);
 router.use("/lodge", lodgeRouter);
+router.use("/reservation", reservationRouter)
 
 export default router;
