@@ -23,6 +23,7 @@ router.get(
     const adultsNum = parseInt(String(adults)) || 1;
     const childrenNum = parseInt(String(children)) || 0;
     const accommodationTypeStr = String(accommodationType) || "All";
+    const roomCount = parseInt(String(req.query.room)) || 1;
 
     try {
       const lodges = await prisma.hotSpringLodge.findMany({
@@ -44,7 +45,7 @@ router.get(
                     lt: checkOutDate,
                   },
                   availableRooms: {
-                    gte: 1,
+                    gte: roomCount,
                   },
                 },
               },
@@ -68,7 +69,7 @@ router.get(
                     lt: checkOutDate,
                   },
                   availableRooms: {
-                    gte: 1,
+                    gte: roomCount,
                   },
                 },
               },
@@ -82,7 +83,7 @@ router.get(
                     lt: checkOutDate,
                   },
                   availableRooms: {
-                    gte: 1,
+                    gte: roomCount,
                   },
                 },
               },
