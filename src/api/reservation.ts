@@ -143,8 +143,9 @@ router.post(
                 id: inventory.id,
               },
               data: {
-                availableRooms:
-                  inventory.availableRooms - reservation.roomCount,
+                availableRooms: {
+                  decrement: reservation.roomCount,
+                },
               },
             })
           )
