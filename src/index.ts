@@ -1,3 +1,5 @@
+import "./jobs/cron"
+
 import app from './app';
 
 const port = process.env.PORT || 5000;
