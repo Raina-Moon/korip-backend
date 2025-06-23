@@ -25,10 +25,29 @@ router.get(
     const accommodationTypeStr = String(accommodationType) || "All";
     const roomCount = parseInt(String(req.query.room)) || 1;
 
+    console.log("Search parameters:", {
+      region,
+      checkIn,
+      checkOut,
+      adults,
+      children,
+      accommodationType,
+      room : req.query.room,
+    })
+
+    console.log("Parsed parameters:", {
+      checkInDate,
+      checkOutDate,
+      adultsNum,
+      childrenNum,
+      accommodationTypeStr,
+      roomCount,
+    });
+
     try {
       const lodges = await prisma.hotSpringLodge.findMany({
         where: {
-          address: region !== "전체" ? { startsWith: String(region) } : undefined,
+          address: region !== "전체" && region !== "All" ? { contains: String(region), mode:"insensitive" } : undefined,
           accommodationType: accommodationTypeStr !== "전체" ? String(accommodationTypeStr) : undefined,
           roomTypes: {
             some: {
@@ -92,6 +111,7 @@ router.get(
         },
       });
 
+      console.log("Found lodges:", lodges.length);
       res.status(200).json(lodges);
     } catch (err) {
       console.error(err);
