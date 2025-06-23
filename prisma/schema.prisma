@@ -93,7 +93,7 @@ model HotSpringLodgeReview {
 }
 
 model HotSpringLodgeImage {
-  id       Int     @id @default(autoincrement())
+  id       Int    @id @default(autoincrement())
   lodgeId  Int
   imageUrl String
   publicId String
@@ -137,18 +137,25 @@ enum ReservationStatus {
   PENDING
 }
 
+enum CancelReason {
+  AUTO_EXPIRED
+  USER_REQUESTED
+  ADMIN_FORCED
+}
+
 model Reservation {
-  id        Int      @id @default(autoincrement())
-  lodgeId   Int
-  userId    Int
-  checkIn   DateTime
-  checkOut  DateTime
-  adults    Int
-  children  Int
-  roomCount Int
+  id           Int           @id @default(autoincrement())
+  lodgeId      Int
+  userId       Int
+  checkIn      DateTime
+  checkOut     DateTime
+  adults       Int
+  children     Int
+  roomCount    Int
+  cancelReason CancelReason?
 
   createdAt DateTime          @default(now())
-  status    ReservationStatus @default(CONFIRMED)
+  status    ReservationStatus @default(PENDING)
 
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
   user  User           @relation(fields: [userId], references: [id])
@@ -169,7 +176,7 @@ model SeasonalPricing {
 }
 
 model RoomInventory {
-  id             Int       @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   lodgeId        Int
   roomTypeId     Int
   totalRooms     Int
