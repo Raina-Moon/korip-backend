@@ -92,7 +92,12 @@ router.get(
         },
       });
 
-      res.status(200).json(lodges);
+      res.status(200).json(lodges.map((lodge) => ({
+        ...lodge,
+        region,
+        adults : adultsNum,
+        children: childrenNum,
+      })));
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
