@@ -180,31 +180,38 @@ router.get(
   })
 );
 
-router.get(
-  "/:id",
-  asyncHandler(async (req, res) => {
+router.get("/:id", asyncHandler(async (req, res) => {
+  try {
     const { id } = req.params;
-
-    try {
-      const lodge = await prisma.hotSpringLodge.findUnique({
-        where: { id: Number(id) },
-        include: {
-          images: true,
-          details: true,
+    const lodge = await prisma.hotSpringLodge.findUnique({
+      where: { id: Number(id) },
+      include: {
+        images: true,
+        roomTypes: {
+          include: {
+            seasonalPricing: true,
+            images: true,
+          },
         },
-      });
+      },
+    });
 
-      if (!lodge) {
-        return res.status(404).json({ message: "Lodge not found" });
-      }
-
-      res.status(200).json(lodge);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Internal server error" });
+    if (!lodge) {
+      return res.status(404).json({ message: "Lodge not found" });
     }
-  })
-);
+    res.status(200).json({
+      ...lodge,
+      images: lodge.images,
+      roomTypes: lodge.roomTypes.map((roomType) => ({
+        ...roomType,
+        seasonalPricing: roomType.seasonalPricing,
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}));
 
 router.get("/", async (req, res) => {
   const { name, address, description, accommodationType } = req.query;
