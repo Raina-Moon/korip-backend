@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { CancelReason, PrismaClient, ReservationStatus } from "@prisma/client";
 import express from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 
@@ -53,16 +53,22 @@ router.get(
 );
 
 router.patch(
-  ":id/confirm",
+  "/:id/confirm",
   asyncHandler(async (req, res) => {
-    const { status } = req.body;
-    if (!["PENDING", "CONFIRMED", "CANCELLED"].includes(status)) {
+    const { status, cancelReason } = req.body;
+    if (!Object.values(ReservationStatus).includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
     const updated = await prisma.reservation.update({
       where: { id: Number(req.params.id) },
-      data: { status },
+      data: {
+        status,
+        cancelReason:
+          status === "CANCELED"
+            ? (cancelReason as CancelReason) || CancelReason.ADMIN_FORCED
+            : null,
+      },
     });
     res.status(200).json(updated);
   })
