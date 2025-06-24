@@ -154,6 +154,13 @@ model Reservation {
   roomCount    Int
   cancelReason CancelReason?
 
+  firstName       String
+  lastName        String
+  nationality     String
+  phoneNumber     String
+  email           String?
+  specialRequests String?
+
   createdAt DateTime          @default(now())
   status    ReservationStatus @default(PENDING)
 
