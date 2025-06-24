@@ -18,10 +18,10 @@ router.get(
             nickname: true,
             email: true,
           },
-          orderBy: {
-            createdAt: "desc",
-          },
         },
+      },
+      orderBy: {
+        createdAt: "desc",
       },
     });
     res.status(200).json(reservation);
