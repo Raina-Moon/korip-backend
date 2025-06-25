@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 router.post(
   "/calculate",
   asyncHandler(async (req, res) => {
-    const { checkIn, checkOut, lodgeId, roomTypeId, roomCount } = req.body;
+    const { checkIn, checkOut, roomTypeId, roomCount } = req.body;
     const dates: Date[] = [];
     let current = new Date(checkIn);
     const end = new Date(checkOut);
