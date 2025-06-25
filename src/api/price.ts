@@ -6,7 +6,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 router.post(
-  "/caculate",
+  "/calculate",
   asyncHandler(async (req, res) => {
     const { checkIn, checkOut, lodgeId, roomTypeId, roomCount } = req.body;
     const dates: Date[] = [];
