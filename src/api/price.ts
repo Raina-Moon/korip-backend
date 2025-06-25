@@ -9,6 +9,14 @@ router.post(
   "/calculate",
   asyncHandler(async (req, res) => {
     const { checkIn, checkOut, roomTypeId, roomCount } = req.body;
+
+    console.log("Request body:", {
+        checkIn,
+        checkOut,
+        roomTypeId: Number(roomTypeId),
+        roomCount: Number(roomCount),
+    });
+    
     const dates: Date[] = [];
     let current = new Date(checkIn);
     const end = new Date(checkOut);
