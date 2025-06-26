@@ -18,6 +18,12 @@ router.post(
       adults,
       children,
       roomCount,
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      specialRequests,
+      nationality,
     } = req.body;
 
     const userId = req.user?.userId;
@@ -30,7 +36,10 @@ router.post(
       !adults ||
       !children ||
       !roomCount ||
-      !userId
+      !userId ||
+      !firstName ||
+      !lastName ||
+      !phoneNumber
     ) {
       return res.status(400).json({ error: "All fields are required" });
     }
@@ -45,33 +54,22 @@ router.post(
           current.setDate(current.getDate() + 1);
         }
 
-        const inventories = await tx.roomInventory.findMany({
-          where: {
-            lodgeId,
-            roomTypeId,
-            date: {
-              in: dates,
-            },
-          },
-        });
-        const isAvailable = inventories.every(
-          (inventory) => inventory.availableRooms >= roomCount
-        );
-
-        if (!isAvailable) {
-          throw new Error("Not enough available rooms for the selected dates");
-        }
-
         const createdReservation = await tx.reservation.create({
           data: {
-            lodgeId,
-            roomTypeId,
+            lodgeId: Number(lodgeId),
+            roomTypeId : Number(roomTypeId),
             userId: userId!,
             checkIn: new Date(checkIn),
             checkOut: new Date(checkOut),
-            adults,
-            children,
-            roomCount,
+            adults : Number(adults),
+            children : Number(children),
+            roomCount : Number(roomCount),
+            firstName,
+            lastName,
+            email,
+            phoneNumber,
+            nationality,
+            specialRequests: JSON.stringify(specialRequests || []),
             status: "PENDING",
           },
         });
