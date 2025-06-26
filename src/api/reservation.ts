@@ -56,14 +56,14 @@ router.post(
 
         const createdReservation = await tx.reservation.create({
           data: {
-            lodgeId,
-            roomTypeId,
+            lodgeId: Number(lodgeId),
+            roomTypeId : Number(roomTypeId),
             userId: userId!,
             checkIn: new Date(checkIn),
             checkOut: new Date(checkOut),
-            adults,
-            children,
-            roomCount,
+            adults : Number(adults),
+            children : Number(children),
+            roomCount : Number(roomCount),
             firstName,
             lastName,
             email,
