@@ -63,6 +63,10 @@ router.patch(
     const { rating, comment } = req.body;
     const userId = req.user?.userId;
 
+    if(!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     try {
       const existingReview = await prisma.hotSpringLodgeReview.findUnique({
         where: { id: Number(id) },
@@ -76,6 +80,23 @@ router.patch(
         return res
           .status(403)
           .json({ message: "You can only edit your own reviews" });
+      }
+
+      const validReservation = await prisma.reservation.findFirst({
+        where: {
+          userId: userId,
+          lodgeId: existingReview.lodgeId,
+          status: "CONFIRMED",
+          checkOut: {
+            lt: new Date(),
+          },
+        },
+      });
+
+      if (!validReservation) {
+        return res
+          .status(403)
+          .json({ message: "You can only edit reviews for completed stays" });
       }
 
       const updatedReview = await prisma.hotSpringLodgeReview.update({
