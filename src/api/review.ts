@@ -6,6 +6,32 @@ import { asyncHandler } from "../utils/asyncHandler";
 const router = express.Router();
 const prisma = new PrismaClient();
 
+router.get("/lodges/:lodgeId", asyncHandler(async (req, res) => {
+  const { lodgeId } = req.params;
+
+  try {
+    const reviews = await prisma.hotSpringLodgeReview.findMany({
+      where: { lodgeId: Number(lodgeId) },
+      include: {
+        user: {
+          select: {
+            id: true,
+            nickname: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    res.status(200).json(reviews);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
 router.post(
   "/",
   authToken,
