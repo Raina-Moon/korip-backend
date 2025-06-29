@@ -6,7 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.get("/lodges/:lodgeId", asyncHandler(async (req, res) => {
+router.get("/lodge/:lodgeId", asyncHandler(async (req, res) => {
   const { lodgeId } = req.params;
 
   try {
