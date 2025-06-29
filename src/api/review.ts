@@ -6,31 +6,70 @@ import { asyncHandler } from "../utils/asyncHandler";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.get("/lodge/:lodgeId", asyncHandler(async (req, res) => {
-  const { lodgeId } = req.params;
+router.get(
+  "/lodge/:lodgeId",
+  asyncHandler(async (req, res) => {
+    const { lodgeId } = req.params;
 
-  try {
-    const reviews = await prisma.hotSpringLodgeReview.findMany({
-      where: { lodgeId: Number(lodgeId) },
-      include: {
-        user: {
-          select: {
-            id: true,
-            nickname: true,
+    try {
+      const reviews = await prisma.hotSpringLodgeReview.findMany({
+        where: { lodgeId: Number(lodgeId) },
+        include: {
+          user: {
+            select: {
+              id: true,
+              nickname: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
 
-    res.status(200).json(reviews);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-}));
+      res.status(200).json(reviews);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.get(
+  "/my",
+  authToken,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const reviews = await prisma.hotSpringLodgeReview.findMany({
+        where: { userId: userId },
+        include: {
+          lodge: {
+            select:{
+              id: true,
+              name: true,
+              address: true,
+              images: true,
+            }
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      res.status(200).json(reviews);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
 
 router.post(
   "/",
@@ -89,7 +128,7 @@ router.patch(
     const { rating, comment } = req.body;
     const userId = req.user?.userId;
 
-    if(!userId) {
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
