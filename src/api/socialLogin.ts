@@ -42,12 +42,12 @@ router.post("/", asyncHandler(async (req, res) => {
 
     const token = generateAccessToken({ userId: user.id, role: user.role });
 
-    res.cookie("accessToken", token, {
-      httpOnly: true,
-      secure: false, // if using HTTPS, set this to true
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // res.cookie("accessToken", token, {
+    //   httpOnly: true,
+    //   secure: false, // if using HTTPS, set this to true
+    //   sameSite: "lax",
+    //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    // });
 
     return res.status(200).json({
       token,
