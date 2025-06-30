@@ -10,20 +10,21 @@ export const authToken = (
   res: Response,
   next: NextFunction
 ) => {
-  // const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization;
 
-  // if (!authHeader?.startsWith("Bearer ")) {
-  //   res.status(401).json({ message: "Unauthorized" });
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  // const token = req.cookies.accessToken;
+  // if (!token) {
+  //   res.status(401).json({ message: "No token provided" });
   //   return;
   // }
 
-  // const token = authHeader.split(" ")[1];
-
-  const token = req.cookies.accessToken;
-  if (!token) {
-    res.status(401).json({ message: "No token provided" });
-    return;
-  }
   try {
     const decoded = verifyAccessToken(token) as {
       userId: number;
