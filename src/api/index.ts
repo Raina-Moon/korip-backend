@@ -8,6 +8,7 @@ import reviewRouter from "./review";
 import lodgeRouter from "./lodge";
 import reservationRouter from "./reservation";
 import priceRouter from "./price";
+import bookmarkRouter from "./bookmark";
 
 const router = express.Router();
 
@@ -20,5 +21,6 @@ router.use("/review", reviewRouter);
 router.use("/lodge", lodgeRouter);
 router.use("/reservation", reservationRouter);
 router.use("/price", priceRouter);
+router.use("/bookmark", bookmarkRouter);
 
 export default router;
