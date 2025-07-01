@@ -53,12 +53,18 @@ router.delete("/review/:reviewId", asyncHandler(async (req, res) => {
   }
 }));
 
-router.patch("/review/:reviewId/hide", async (req, res) => {
+router.patch("/review/:reviewId/hide", asyncHandler(async (req, res) => {
   const { reviewId } = req.params;
+  const { isHidden } = req.body;
+
+  if (typeof isHidden !== "boolean") {
+    return res.status(400).json({ message: "isHidden must be a boolean" });
+  }
+
   try {
     const updated = await prisma.hotSpringLodgeReview.update({
       where: { id: Number(reviewId) },
-      data: { isHidden: true },
+      data: { isHidden },
     });
     res.status(200).json({
       message: "Review hidden successfully",
@@ -68,6 +74,6 @@ router.patch("/review/:reviewId/hide", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 export default router;

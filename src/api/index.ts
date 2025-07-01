@@ -9,6 +9,7 @@ import lodgeRouter from "./lodge";
 import reservationRouter from "./reservation";
 import priceRouter from "./price";
 import bookmarkRouter from "./bookmark";
+import reportReviewRouter from "./report-review";
 
 const router = express.Router();
 
@@ -22,5 +23,6 @@ router.use("/lodge", lodgeRouter);
 router.use("/reservation", reservationRouter);
 router.use("/price", priceRouter);
 router.use("/bookmark", bookmarkRouter);
+router.use("/report-review", reportReviewRouter);
 
 export default router;
