@@ -57,13 +57,13 @@ router.post(
         const createdReservation = await tx.reservation.create({
           data: {
             lodgeId: Number(lodgeId),
-            roomTypeId : Number(roomTypeId),
+            roomTypeId: Number(roomTypeId),
             userId: userId!,
             checkIn: new Date(checkIn),
             checkOut: new Date(checkOut),
-            adults : Number(adults),
-            children : Number(children),
-            roomCount : Number(roomCount),
+            adults: Number(adults),
+            children: Number(children),
+            roomCount: Number(roomCount),
             firstName,
             lastName,
             email,
@@ -173,7 +173,11 @@ router.get("/", authToken, async (req: AuthRequest, res) => {
       },
       include: {
         lodge: true,
-        roomType: true,
+        roomType: {
+          include: {
+            images: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
