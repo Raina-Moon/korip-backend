@@ -221,6 +221,6 @@ model ReportReview {
   reason    String
   createdAt DateTime @default(now())
 
-  review HotSpringLodgeReview @relation(fields: [reviewId], references: [id])
+  review HotSpringLodgeReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   user   User                 @relation(fields: [userId], references: [id])
 }
