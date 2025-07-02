@@ -28,52 +28,82 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.delete("/review/:reviewId", asyncHandler(async (req, res) => {
-  const { reviewId } = req.params;
-  try {
-    const existingReview = await prisma.hotSpringLodgeReview.findUnique({
-      where: { id: Number(reviewId) },
-    });
-    if (!existingReview) {
-      return res.status(404).json({ message: "Review not found" });
+router.delete(
+  "/report-only/:reviewId",
+  asyncHandler(async (req, res) => {
+    const { reviewId } = req.params;
+
+    try {
+      await prisma.reportReview.deleteMany({
+        where: { reviewId: Number(reviewId) },
+      });
+
+      res.status(200).json({
+        message: "Review deleted successfully",
+        reviewId: Number(reviewId),
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
     }
-    
-    await prisma.reportReview.deleteMany({
-      where: { reviewId: Number(reviewId) },
-    });
+  })
+);
 
-    await prisma.hotSpringLodgeReview.delete({
-      where: { id: Number(reviewId) },
-    });
+router.patch(
+  "/review/:reviewId/hide",
+  asyncHandler(async (req, res) => {
+    const { reviewId } = req.params;
+    const { isHidden } = req.body;
 
-    res.status(200).json({ message: "Review deleted successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-}));
+    if (typeof isHidden !== "boolean") {
+      return res.status(400).json({ message: "isHidden must be a boolean" });
+    }
 
-router.patch("/review/:reviewId/hide", asyncHandler(async (req, res) => {
-  const { reviewId } = req.params;
-  const { isHidden } = req.body;
+    try {
+      const updated = await prisma.hotSpringLodgeReview.update({
+        where: { id: Number(reviewId) },
+        data: { isHidden },
+      });
+      res.status(200).json({
+        message: "Review hidden successfully",
+        updated,
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
 
-  if (typeof isHidden !== "boolean") {
-    return res.status(400).json({ message: "isHidden must be a boolean" });
-  }
+router.delete(
+  "/review-only/:reviewId",
+  asyncHandler(async (req, res) => {
+    const { reviewId } = req.params;
 
-  try {
-    const updated = await prisma.hotSpringLodgeReview.update({
-      where: { id: Number(reviewId) },
-      data: { isHidden },
-    });
-    res.status(200).json({
-      message: "Review hidden successfully",
-      updated,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-}));
+    try {
+      const existingReview = await prisma.hotSpringLodgeReview.findUnique({
+        where: { id: Number(reviewId) },
+      });
+
+      if (!existingReview) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      await prisma.hotSpringLodgeReview.delete({
+        where: { id: Number(reviewId) },
+      });
+
+      res
+        .status(200)
+        .json({
+          message: "Review deleted successfully",
+          reviewId: Number(reviewId),
+        });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
 
 export default router;
