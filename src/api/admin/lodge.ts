@@ -513,6 +513,10 @@ router.delete("/:id", (async (req, res) => {
       )
     );
 
+    await prisma.roomTypeImage.deleteMany({
+      where: { roomTypeId: { in: roomTypeIds } },
+    })
+
     await prisma.seasonalPricing.deleteMany({
       where: { roomTypeId: { in: roomTypeIds } },
     });
@@ -526,6 +530,22 @@ router.delete("/:id", (async (req, res) => {
     });
 
     await prisma.hotSpringLodgeImage.deleteMany({
+      where: { lodgeId: Number(id) },
+    });
+
+    await prisma.reservation.deleteMany({
+      where: { lodgeId: Number(id) },
+    });
+
+    await prisma.hotSpringLodgeBookmark.deleteMany({
+      where: { lodgeId: Number(id) },
+    });
+
+    await prisma.hotSpringLodgeDetail.deleteMany({
+      where: { lodgeId: Number(id) },
+    });
+
+    await prisma.hotSpringLodgeReview.deleteMany({
       where: { lodgeId: Number(id) },
     });
 
