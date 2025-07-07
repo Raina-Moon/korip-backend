@@ -1,5 +1,5 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, SeasonalPricing } from "@prisma/client";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -22,14 +22,23 @@ router.get(
     const checkOutDate = new Date(String(checkOut));
     const adultsNum = parseInt(String(adults)) || 1;
     const childrenNum = parseInt(String(children)) || 0;
-    const accommodationTypeStr = accommodationType === undefined || accommodationType === null ? "All" : String(accommodationType);
+    const accommodationTypeStr =
+      accommodationType === undefined || accommodationType === null
+        ? "All"
+        : String(accommodationType);
     const roomCount = parseInt(String(req.query.room)) || 1;
 
     try {
       const lodges = await prisma.hotSpringLodge.findMany({
         where: {
-          address: region !== "전체" && region !== "All" ? { contains: String(region), mode:"insensitive" } : undefined,
-          accommodationType: accommodationTypeStr !== "전체" && accommodationTypeStr !== "All" ? accommodationTypeStr : undefined,
+          address:
+            region !== "전체" && region !== "All"
+              ? { contains: String(region), mode: "insensitive" }
+              : undefined,
+          accommodationType:
+            accommodationTypeStr !== "전체" && accommodationTypeStr !== "All"
+              ? accommodationTypeStr
+              : undefined,
           roomTypes: {
             some: {
               maxAdults: {
@@ -92,12 +101,87 @@ router.get(
         },
       });
 
-      res.status(200).json(lodges.map((lodge) => ({
-        ...lodge,
-        region,
-        adults : adultsNum,
-        children: childrenNum,
-      })));
+      function getStayDates(checkIn: Date, checkOut: Date) {
+        const dates: Date[] = [];
+        let current = new Date(checkIn);
+        const end = new Date(checkOut);
+        while (current < end) {
+          dates.push(new Date(current));
+          current.setDate(current.getDate() + 1);
+        }
+        return dates;
+      }
+
+      function isWeekend(date: Date) {
+        const day = date.getDay();
+        return day === 0 || day === 6;
+      }
+
+      function getApplicableSeasonalPricing(
+        seasonalPricing: SeasonalPricing[],
+        date: Date
+      ) {
+        return seasonalPricing.find((season) => {
+          return date >= season.from && date <= season.to;
+        });
+      }
+
+      function getPriceForDate(
+        date: Date,
+        roomType: { basePrice: number; weekendPrice: number | null },
+        seasonalPricing: SeasonalPricing[]
+      ) {
+        const season = getApplicableSeasonalPricing(seasonalPricing, date);
+        if (season) {
+          return isWeekend(date) ? season.weekendPrice : season.basePrice;
+        } else {
+          return isWeekend(date)
+            ? roomType.weekendPrice ?? roomType.basePrice
+            : roomType.basePrice;
+        }
+      }
+
+      const stayDates = getStayDates(checkInDate, checkOutDate);
+
+      const lodgesWithPrice = await Promise.all(
+        lodges.map(async (lodge) => {
+          const roomTypesWithPrice = await Promise.all(
+            lodge.roomTypes.map(async (room) => {
+              const seasonalPricing = await prisma.seasonalPricing.findMany({
+                where: {
+                  roomTypeId: room.id,
+                },
+              });
+
+              let totalPrice = 0;
+              for (const date of stayDates) {
+                totalPrice += getPriceForDate(date, room, seasonalPricing);
+              }
+              totalPrice *= roomCount;
+              const pricePerNight =
+                stayDates.length > 0
+                  ? Math.floor(totalPrice / stayDates.length)
+                  : 0;
+
+              return {
+                ...room,
+                totalPrice,
+                pricePerNight,
+              };
+            })
+          );
+
+          return {
+            ...lodge,
+            roomTypes: roomTypesWithPrice,
+            region,
+            adults: adultsNum,
+            children: childrenNum,
+          };
+        })
+      );
+
+      res.status(200).json(lodgesWithPrice);
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
@@ -180,38 +264,41 @@ router.get(
   })
 );
 
-router.get("/:id", asyncHandler(async (req, res) => {
-  try {
-    const { id } = req.params;
-    const lodge = await prisma.hotSpringLodge.findUnique({
-      where: { id: Number(id) },
-      include: {
-        images: true,
-        roomTypes: {
-          include: {
-            seasonalPricing: true,
-            images: true,
+router.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+      const lodge = await prisma.hotSpringLodge.findUnique({
+        where: { id: Number(id) },
+        include: {
+          images: true,
+          roomTypes: {
+            include: {
+              seasonalPricing: true,
+              images: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!lodge) {
-      return res.status(404).json({ message: "Lodge not found" });
+      if (!lodge) {
+        return res.status(404).json({ message: "Lodge not found" });
+      }
+      res.status(200).json({
+        ...lodge,
+        images: lodge.images,
+        roomTypes: lodge.roomTypes.map((roomType) => ({
+          ...roomType,
+          seasonalPricing: roomType.seasonalPricing,
+        })),
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
     }
-    res.status(200).json({
-      ...lodge,
-      images: lodge.images,
-      roomTypes: lodge.roomTypes.map((roomType) => ({
-        ...roomType,
-        seasonalPricing: roomType.seasonalPricing,
-      })),
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-}));
+  })
+);
 
 router.get("/", async (req, res) => {
   const { name, address, description, accommodationType } = req.query;
@@ -244,7 +331,5 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
-
 
 export default router;
