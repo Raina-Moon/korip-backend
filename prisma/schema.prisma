@@ -161,8 +161,7 @@ model Reservation {
   email           String?
   specialRequests String?
 
-  bookedBasePrice    Int?
-  bookedWeekendPrice Int?
+  totalPrice Int?
 
   createdAt DateTime          @default(now())
   status    ReservationStatus @default(PENDING)
