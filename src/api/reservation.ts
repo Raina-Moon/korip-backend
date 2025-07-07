@@ -54,6 +54,37 @@ router.post(
           current.setDate(current.getDate() + 1);
         }
 
+        const inventories = await tx.roomInventory.findMany({
+          where: {
+            lodgeId: Number(lodgeId),
+            roomTypeId: Number(roomTypeId),
+            date: {
+              in: dates,
+            },
+          },
+        });
+
+        const isAvailable = inventories.every((inventory) => inventory.availableRooms >= Number(roomCount));
+
+        if(!isAvailable) {
+          throw new Error("Not enough available rooms for the selected dates");
+        }
+
+        await Promise.all(
+          inventories.map((inventory) =>
+            tx.roomInventory.update({
+              where: {
+                id: inventory.id,
+              },
+              data: {
+                availableRooms: {
+                  decrement: Number(roomCount),
+                },
+              },
+            })
+          )
+        );
+        
         const createdReservation = await tx.reservation.create({
           data: {
             lodgeId: Number(lodgeId),
