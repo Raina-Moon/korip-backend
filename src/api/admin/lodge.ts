@@ -367,9 +367,102 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           },
         });
 
-        await tx.roomType.deleteMany({
-          where: { lodgeId: Number(id) },
-        });
+        for (let i = 0; i < roomTypes.length; i++) {
+          const roomType = roomTypes[i];
+
+          if (roomType.id) {
+            await tx.roomType.update({
+              where: { id: roomType.id },
+              data: {
+                name: roomType.name,
+                description: roomType.description,
+                basePrice: roomType.basePrice,
+                weekendPrice: roomType.weekendPrice,
+                maxAdults: roomType.maxAdults,
+                maxChildren: roomType.maxChildren,
+                totalRooms: roomType.totalRooms,
+              },
+            });
+
+            await tx.seasonalPricing.deleteMany({
+              where: { roomTypeId: roomType.id },
+            });
+
+            if (roomType.seasonalPricing?.length) {
+              await tx.seasonalPricing.createMany({
+                data: roomType.seasonalPricing.map((s: any) => ({
+                  roomTypeId: roomType.id,
+                  from: new Date(s.from),
+                  to: new Date(s.to),
+                  basePrice: s.basePrice,
+                  weekendPrice: s.weekendPrice,
+                })),
+              });
+            }
+
+            const keepImages = keepRoomTypeImgIds
+              .filter((item: any) => item.roomTypeId === roomType.id)
+              .map((item: any) => item.imageId);
+
+            await tx.roomTypeImage.deleteMany({
+              where: {
+                roomTypeId: roomType.id,
+                id: { notIn: keepImages },
+              },
+            });
+
+            const newImages = roomTypeImageUpload.filter(
+              (img) => img.idx === i
+            );
+            if (newImages.length > 0) {
+              await tx.roomTypeImage.createMany({
+                data: newImages.map((img) => ({
+                  roomTypeId: roomType.id,
+                  imageUrl: img.imageUrl,
+                  publicId: img.publicId,
+                })),
+              });
+            }
+          } else {
+            const createdRoom = await tx.roomType.create({
+              data: {
+                lodgeId: updated.id,
+                name: roomType.name,
+                description: roomType.description,
+                basePrice: roomType.basePrice,
+                weekendPrice: roomType.weekendPrice,
+                maxAdults: roomType.maxAdults,
+                maxChildren: roomType.maxChildren,
+                totalRooms: roomType.totalRooms,
+              },
+            });
+
+            if (roomType.seasonalPricing?.length) {
+              await tx.seasonalPricing.createMany({
+                data: roomType.seasonalPricing.map((s: any) => ({
+                  roomTypeId: createdRoom.id,
+                  from: new Date(s.from),
+                  to: new Date(s.to),
+                  basePrice: s.basePrice,
+                  weekendPrice: s.weekendPrice,
+                })),
+              });
+            }
+
+            const newImages = roomTypeImageUpload.filter(
+              (img) => img.idx === i
+            );
+            if (newImages.length > 0) {
+              await tx.roomTypeImage.createMany({
+                data: newImages.map((img) => ({
+                  roomTypeId: createdRoom.id,
+                  imageUrl: img.imageUrl,
+                  publicId: img.publicId,
+                })),
+              });
+            }
+          }
+        }
 
         const createRoomTypes = await Promise.all(
           roomTypes.map(async (roomType: any) => {
@@ -515,7 +608,7 @@ router.delete("/:id", (async (req, res) => {
 
     await prisma.roomTypeImage.deleteMany({
       where: { roomTypeId: { in: roomTypeIds } },
-    })
+    });
 
     await prisma.seasonalPricing.deleteMany({
       where: { roomTypeId: { in: roomTypeIds } },
