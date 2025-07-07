@@ -360,10 +360,14 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           where: { lodgeId: Number(id) },
         });
 
+        const keepRoomTypeImageIdList = (keepRoomTypeImgIds || []).map(
+          (item: { roomTypeId: number; imageId: number }) => item.imageId
+        );
+
         await tx.roomTypeImage.deleteMany({
           where: {
             roomTypeId: { in: roomTypeIds },
-            id: { notIn: keepRoomTypeImgIds },
+            id: { notIn: keepRoomTypeImageIdList },
           },
         });
 
@@ -481,7 +485,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         message: "Lodge updated successfully",
         lodge: result.updated,
         uploadedLodgeImages: result.uploadedLodgeImages,
-        roomTypes: updatedRoomTypes
+        roomTypes: updatedRoomTypes,
       });
     } catch (err) {
       console.error("Transaction error:", err);
