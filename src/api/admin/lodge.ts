@@ -464,110 +464,24 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           }
         }
 
-        const createRoomTypes = await Promise.all(
-          roomTypes.map(async (roomType: any) => {
-            const createdRoom = await tx.roomType.create({
-              data: {
-                lodgeId: updated.id,
-                name: roomType.name,
-                description: roomType.description,
-                basePrice: roomType.basePrice,
-                weekendPrice: roomType.weekendPrice,
-                maxAdults: roomType.maxAdults,
-                maxChildren: roomType.maxChildren,
-                totalRooms: roomType.totalRooms,
-              },
-            });
-
-            if (Array.isArray(roomType.seasonalPricing)) {
-              await tx.seasonalPricing.createMany({
-                data: roomType.seasonalPricing.map(
-                  (pricing: {
-                    from: string;
-                    to: string;
-                    basePrice: number;
-                    weekendPrice: number;
-                  }) => {
-                    const fromData = new Date(pricing.from);
-                    const toData = new Date(pricing.to);
-                    if (isNaN(fromData.getTime()) || isNaN(toData.getTime())) {
-                      throw new Error(
-                        "Invalid date format in seasonal pricing"
-                      );
-                    }
-                    return {
-                      roomTypeId: createdRoom.id,
-                      from: new Date(pricing.from),
-                      to: new Date(pricing.to),
-                      basePrice: pricing.basePrice,
-                      weekendPrice: pricing.weekendPrice,
-                    };
-                  }
-                ),
-              });
-            }
-            return createdRoom;
-          })
-        );
-
-        const existingRoomTypeImages = await tx.roomTypeImage.findMany({
-          where: {
-            roomTypeId: {
-              in: createRoomTypes.map((rt) => rt.id),
-            },
-          },
-        });
-
-        const roomTypeImagesToDelete = existingRoomTypeImages.filter(
-          (img) => !keepRoomTypeImgIds.includes(img.id)
-        );
-
-        await Promise.all(
-          roomTypeImagesToDelete.map((img) => {
-            if (img.publicId) {
-              return deleteFromCloudinary(img.publicId).catch((err) => {
-                console.error(`Failed to delete image ${img.publicId}:`, err);
-              });
-            }
-            return Promise.resolve();
-          })
-        );
-
-        await tx.roomTypeImage.deleteMany({
-          where: {
-            id: { in: roomTypeImagesToDelete.map((img) => img.id) },
-          },
-        });
-
-        const roomTypeImageData = roomTypeImageUpload.map((img) => ({
-          roomTypeId: createRoomTypes[img.idx].id,
-          imageUrl: img.imageUrl,
-          publicId: img.publicId,
-        }));
-
-        if (roomTypeImageData.length > 0) {
-          await tx.roomTypeImage.createMany({
-            data: roomTypeImageData,
-          });
-        }
-
-        return { updated, roomTypes: createRoomTypes, uploadedLodgeImages };
+        return { updated, uploadedLodgeImages };
       }); // <-- moved closing brace and parenthesis here
 
-      const roomTypeImages = await prisma.roomTypeImage.findMany({
+      const updatedRoomTypes = await prisma.roomType.findMany({
         where: {
-          roomTypeId: {
-            in: result.roomTypes.map((rt) => rt.id),
-          },
+          lodgeId: Number(id),
+        },
+        include: {
+          seasonalPricing: true,
+          images: true,
         },
       });
 
       res.status(200).json({
         message: "Lodge updated successfully",
         lodge: result.updated,
-        roomTypes: result.roomTypes,
         uploadedLodgeImages: result.uploadedLodgeImages,
-        roomTypeImages,
+        roomTypes: updatedRoomTypes
       });
     } catch (err) {
       console.error("Transaction error:", err);
