@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import express from "express";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
+import { CancelReason } from "@prisma/client";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -64,9 +65,11 @@ router.post(
           },
         });
 
-        const isAvailable = inventories.every((inventory) => inventory.availableRooms >= Number(roomCount));
+        const isAvailable = inventories.every(
+          (inventory) => inventory.availableRooms >= Number(roomCount)
+        );
 
-        if(!isAvailable) {
+        if (!isAvailable) {
           throw new Error("Not enough available rooms for the selected dates");
         }
 
@@ -184,9 +187,14 @@ router.patch(
   authToken,
   asyncHandler(async (req: AuthRequest, res) => {
     const reservationId = Number(req.params.id);
+    const { cancelReason } = req.body;
 
     if (!reservationId) {
       return res.status(400).json({ error: "Reservation ID is required" });
+    }
+
+    if (!cancelReason || !Object.values(CancelReason).includes(cancelReason)) {
+      return res.status(400).json({ error: "Valid cancel reason is required" });
     }
 
     try {
@@ -199,37 +207,35 @@ router.patch(
           throw new Error("Reservation not found");
         }
 
-        if (reservation.status !== "CONFIRMED") {
-          return await tx.reservation.update({
-            where: { id: reservationId },
-            data: { status: "CANCELLED" },
-          });
-        }
+        if (
+          reservation.status === "CONFIRMED" &&
+          (cancelReason === "USER_REQUESTED" || cancelReason === "ADMIN_FORCED")
+        ) {
+          const dates: Date[] = [];
+          let current = new Date(reservation.checkIn);
+          const end = new Date(reservation.checkOut);
+          while (current < end) {
+            dates.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+          }
 
-        const dates: Date[] = [];
-        let current = new Date(reservation.checkIn);
-        const end = new Date(reservation.checkOut);
-        while (current < end) {
-          dates.push(new Date(current));
-          current.setDate(current.getDate() + 1);
-        }
-
-        await Promise.all(
-          dates.map((date) =>
-            tx.roomInventory.updateMany({
-              where: {
-                lodgeId: reservation.lodgeId,
-                roomTypeId: reservation.roomTypeId,
-                date,
-              },
-              data: {
-                availableRooms: {
-                  increment: reservation.roomCount,
+          await Promise.all(
+            dates.map((date) =>
+              tx.roomInventory.updateMany({
+                where: {
+                  lodgeId: reservation.lodgeId,
+                  roomTypeId: reservation.roomTypeId,
+                  date,
                 },
-              },
-            })
-          )
-        );
+                data: {
+                  availableRooms: {
+                    increment: reservation.roomCount,
+                  },
+                },
+              })
+            )
+          );
+        }
 
         const updated = await tx.reservation.update({
           where: { id: reservationId },
@@ -246,7 +252,6 @@ router.patch(
     }
   })
 );
-
 
 router.get("/", authToken, async (req: AuthRequest, res) => {
   const userId = req.user?.userId;
