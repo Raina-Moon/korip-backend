@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import express from "express";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
+import { CancelReason } from "@prisma/client";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -64,27 +65,22 @@ router.post(
           },
         });
 
-        const isAvailable = inventories.every((inventory) => inventory.availableRooms >= Number(roomCount));
+        const isAvailable = inventories.every(
+          (inventory) => inventory.availableRooms >= Number(roomCount)
+        );
 
-        if(!isAvailable) {
+        if (!isAvailable) {
           throw new Error("Not enough available rooms for the selected dates");
         }
 
-        await Promise.all(
-          inventories.map((inventory) =>
-            tx.roomInventory.update({
-              where: {
-                id: inventory.id,
-              },
-              data: {
-                availableRooms: {
-                  decrement: Number(roomCount),
-                },
-              },
-            })
-          )
-        );
-        
+        const roomType = await tx.roomType.findUnique({
+          where: { id: Number(roomTypeId) },
+        });
+
+        if (!roomType) {
+          throw new Error("Room type not found");
+        }
+
         const createdReservation = await tx.reservation.create({
           data: {
             lodgeId: Number(lodgeId),
@@ -102,6 +98,8 @@ router.post(
             nationality,
             specialRequests: JSON.stringify(specialRequests || []),
             status: "PENDING",
+            bookedBasePrice: roomType.basePrice,
+            bookedWeekendPrice: roomType.weekendPrice,
           },
         });
 
@@ -187,6 +185,77 @@ router.post(
         return updatedReservation;
       });
       return res.status(200).json({ reservation: confirmed });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  })
+);
+
+router.patch(
+  "/:id/cancel",
+  authToken,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const reservationId = Number(req.params.id);
+    const { cancelReason } = req.body;
+
+    if (!reservationId) {
+      return res.status(400).json({ error: "Reservation ID is required" });
+    }
+
+    if (!cancelReason || !Object.values(CancelReason).includes(cancelReason)) {
+      return res.status(400).json({ error: "Valid cancel reason is required" });
+    }
+
+    try {
+      const cancelled = await prisma.$transaction(async (tx) => {
+        const reservation = await tx.reservation.findUnique({
+          where: { id: reservationId },
+        });
+
+        if (!reservation) {
+          throw new Error("Reservation not found");
+        }
+
+        if (
+          reservation.status === "CONFIRMED" &&
+          (cancelReason === "USER_REQUESTED" || cancelReason === "ADMIN_FORCED")
+        ) {
+          const dates: Date[] = [];
+          let current = new Date(reservation.checkIn);
+          const end = new Date(reservation.checkOut);
+          while (current < end) {
+            dates.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+          }
+
+          await Promise.all(
+            dates.map((date) =>
+              tx.roomInventory.updateMany({
+                where: {
+                  lodgeId: reservation.lodgeId,
+                  roomTypeId: reservation.roomTypeId,
+                  date,
+                },
+                data: {
+                  availableRooms: {
+                    increment: reservation.roomCount,
+                  },
+                },
+              })
+            )
+          );
+        }
+
+        const updated = await tx.reservation.update({
+          where: { id: reservationId },
+          data: { status: "CANCELLED" },
+        });
+
+        return updated;
+      });
+
+      return res.status(200).json({ reservation: cancelled });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });

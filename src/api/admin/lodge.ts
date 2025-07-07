@@ -468,6 +468,32 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           }
         }
 
+        const today = new Date();
+        const dates: Date[] = [];
+        for (let i = 0; i < 365; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() + i);
+          dates.push(d);
+        }
+
+        for (let i = 0; i < roomTypes.length; i++) {
+          const roomType = roomTypes[i];
+
+          if (roomType.totalRooms < 1) {
+            throw new Error("Total rooms must be at least 1");
+          }
+
+          await tx.roomInventory.createMany({
+            data: dates.map((date) => ({
+              lodgeId: updated.id,
+              roomTypeId: roomType.id,
+              date,
+              availableRooms: roomType.availableRooms,
+              totalRooms: roomType.totalRooms,
+            })),
+          });
+        }
+
         return { updated, uploadedLodgeImages };
       }); // <-- moved closing brace and parenthesis here
 
