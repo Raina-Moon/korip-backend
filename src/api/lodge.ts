@@ -28,6 +28,8 @@ router.get(
         : String(accommodationType);
     const roomCount = parseInt(String(req.query.room)) || 1;
 
+    const sort = String(req.query.sort || "popularity");
+
     try {
       const lodges = await prisma.hotSpringLodge.findMany({
         where: {
@@ -96,6 +98,12 @@ router.get(
                   },
                 },
               },
+            },
+          },
+          _count: {
+            select: {
+              reservations: true,
+              reviews: true,
             },
           },
         },
@@ -181,6 +189,33 @@ router.get(
         })
       );
 
+      if (sort === "popularity") {
+        lodgesWithPrice.sort(
+          (a, b) => b._count.reservations - a._count.reservations
+        );
+      } else if (sort === "reviews") {
+        lodgesWithPrice.sort((a, b) => b._count.reviews - a._count.reviews);
+      } else if (sort === "price_asc") {
+        lodgesWithPrice.sort((a, b) => {
+          const priceA = Math.min(
+            ...a.roomTypes.map((r) => r.pricePerNight || Infinity)
+          );
+          const priceB = Math.min(
+            ...b.roomTypes.map((r) => r.pricePerNight || Infinity)
+          );
+          return priceA - priceB;
+        });
+      } else if (sort === "price_desc") {
+        lodgesWithPrice.sort((a, b) => {
+          const priceA = Math.max(
+            ...a.roomTypes.map((r) => r.pricePerNight || 0)
+          );
+          const priceB = Math.max(
+            ...b.roomTypes.map((r) => r.pricePerNight || 0)
+          );
+          return priceB - priceA;
+        });
+      }
       res.status(200).json(lodgesWithPrice);
     } catch (err) {
       console.error(err);
