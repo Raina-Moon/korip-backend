@@ -73,6 +73,14 @@ router.post(
           throw new Error("Not enough available rooms for the selected dates");
         }
 
+        const roomType = await tx.roomType.findUnique({
+          where: { id: Number(roomTypeId) },
+        });
+
+        if (!roomType) {
+          throw new Error("Room type not found");
+        }
+
         const createdReservation = await tx.reservation.create({
           data: {
             lodgeId: Number(lodgeId),
@@ -90,6 +98,8 @@ router.post(
             nationality,
             specialRequests: JSON.stringify(specialRequests || []),
             status: "PENDING",
+            bookedBasePrice: roomType.basePrice,
+            bookedWeekendPrice: roomType.weekendPrice,
           },
         });
 
