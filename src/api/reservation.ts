@@ -75,11 +75,52 @@ router.post(
 
         const roomType = await tx.roomType.findUnique({
           where: { id: Number(roomTypeId) },
+          select: {
+            basePrice: true,
+            weekendPrice: true,
+          },
         });
 
         if (!roomType) {
           throw new Error("Room type not found");
         }
+
+        const isWeekend = (date: Date) => {
+          const day = date.getDay();
+          return day === 0 || day === 6;
+        };
+
+        let totalPrice = 0;
+
+        for (const date of dates) {
+          const seasonal = await tx.seasonalPricing.findFirst({
+            where: {
+              roomTypeId: Number(roomTypeId),
+              from: { lte: date },
+              to: { gte: date },
+            },
+            select: {
+              basePrice: true,
+              weekendPrice: true,
+            },
+          });
+
+          let priceForDate: number;
+
+          if (seasonal) {
+            priceForDate = isWeekend(date)
+              ? seasonal.weekendPrice
+              : seasonal.basePrice;
+          } else {
+            priceForDate = isWeekend(date)
+              ? roomType.weekendPrice ?? 0
+              : roomType.basePrice ?? 0;
+          }
+
+          totalPrice += priceForDate;
+        }
+
+        totalPrice *= Number(roomCount);
 
         const createdReservation = await tx.reservation.create({
           data: {
@@ -98,8 +139,7 @@ router.post(
             nationality,
             specialRequests: JSON.stringify(specialRequests || []),
             status: "PENDING",
-            bookedBasePrice: roomType.basePrice,
-            bookedWeekendPrice: roomType.weekendPrice,
+            totalPrice,
           },
         });
 
