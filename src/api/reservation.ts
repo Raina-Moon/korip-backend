@@ -293,7 +293,9 @@ router.patch(
 
         const updated = await tx.reservation.update({
           where: { id: reservationId },
-          data: { status: "CANCELLED" },
+          data: { status: "CANCELLED",
+            cancelReason: cancelReason
+           },
         });
 
         return updated;
@@ -337,5 +339,7 @@ router.get("/", authToken, async (req: AuthRequest, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
+
 
 export default router;
