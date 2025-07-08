@@ -186,9 +186,6 @@ router.post(
           current.setDate(current.getDate() + 1);
         }
 
-        console.log("Reservation to confirm:", reservation);
-        console.log("Dates to check:", dates);
-
         const inventories = await tx.roomInventory.findMany({
           where: {
             lodgeId: reservation.lodgeId,
@@ -201,9 +198,6 @@ router.post(
             })),
           },
         });
-
-        console.log("Inventories found:", inventories);
-        console.log("reservation.roomCount:", reservation.roomCount);
 
         const isAvailable = inventories.every(
           (inventory) => inventory.availableRooms >= reservation.roomCount
