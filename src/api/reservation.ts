@@ -3,6 +3,7 @@ import express from "express";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
 import { CancelReason } from "@prisma/client";
+import { addDays, startOfDay } from "date-fns";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -189,9 +190,12 @@ router.post(
           where: {
             lodgeId: reservation.lodgeId,
             roomTypeId: reservation.roomTypeId,
-            date: {
-              in: dates,
-            },
+            OR: dates.map((date) => ({
+              date: {
+                gte: startOfDay(date),
+                lt: startOfDay(addDays(date, 1)),
+              },
+            })),
           },
         });
 
