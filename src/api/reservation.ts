@@ -265,13 +265,12 @@ router.patch(
 
         const updated = await tx.reservation.update({
           where: { id: reservationId },
-          data: { status: "CANCELLED",
-            cancelReason: cancelReason
-           },
+          data: { status: "CANCELLED", cancelReason: cancelReason },
         });
-        
+
         if (
-          reservation.status === "CONFIRMED" &&
+          previousStatus === "CONFIRMED" &&
+          updated.status === "CANCELLED" &&
           (cancelReason === "USER_REQUESTED" || cancelReason === "ADMIN_FORCED")
         ) {
           const dates: Date[] = [];
@@ -300,7 +299,6 @@ router.patch(
           );
         }
 
-
         return updated;
       });
 
@@ -319,10 +317,15 @@ router.get("/", authToken, async (req: AuthRequest, res) => {
     const reservations = await prisma.reservation.findMany({
       where: {
         userId: userId ? Number(userId) : undefined,
-        OR : [
-          {status: {not:"CANCELLED"}},
-          {AND: [{status: "CANCELLED"},{cancelReason: {not: "AUTO_EXPIRED"}}]}
-        ]
+        OR: [
+          { status: { not: "CANCELLED" } },
+          {
+            AND: [
+              { status: "CANCELLED" },
+              { cancelReason: { not: "AUTO_EXPIRED" } },
+            ],
+          },
+        ],
       },
       include: {
         lodge: true,
@@ -342,7 +345,5 @@ router.get("/", authToken, async (req: AuthRequest, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
-
 
 export default router;
