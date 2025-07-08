@@ -261,6 +261,15 @@ router.patch(
           throw new Error("Reservation not found");
         }
 
+        const previousStatus = reservation.status;
+
+        const updated = await tx.reservation.update({
+          where: { id: reservationId },
+          data: { status: "CANCELLED",
+            cancelReason: cancelReason
+           },
+        });
+        
         if (
           reservation.status === "CONFIRMED" &&
           (cancelReason === "USER_REQUESTED" || cancelReason === "ADMIN_FORCED")
@@ -291,12 +300,6 @@ router.patch(
           );
         }
 
-        const updated = await tx.reservation.update({
-          where: { id: reservationId },
-          data: { status: "CANCELLED",
-            cancelReason: cancelReason
-           },
-        });
 
         return updated;
       });
