@@ -287,7 +287,10 @@ router.patch(
                 where: {
                   lodgeId: reservation.lodgeId,
                   roomTypeId: reservation.roomTypeId,
-                  date,
+                  date: {
+                    gte: startOfDay(date),
+                    lt: startOfDay(addDays(date, 1)),
+                  },
                 },
                 data: {
                   availableRooms: {
