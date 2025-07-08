@@ -314,6 +314,10 @@ router.get("/", authToken, async (req: AuthRequest, res) => {
     const reservations = await prisma.reservation.findMany({
       where: {
         userId: userId ? Number(userId) : undefined,
+        OR : [
+          {status: {not:"CANCELLED"}},
+          {AND: [{status: "CANCELLED"},{cancelReason: {not: "AUTO_EXPIRED"}}]}
+        ]
       },
       include: {
         lodge: true,
