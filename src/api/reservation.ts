@@ -261,8 +261,16 @@ router.patch(
           throw new Error("Reservation not found");
         }
 
+        const previousStatus = reservation.status;
+
+        const updated = await tx.reservation.update({
+          where: { id: reservationId },
+          data: { status: "CANCELLED", cancelReason: cancelReason },
+        });
+
         if (
-          reservation.status === "CONFIRMED" &&
+          previousStatus === "CONFIRMED" &&
+          updated.status === "CANCELLED" &&
           (cancelReason === "USER_REQUESTED" || cancelReason === "ADMIN_FORCED")
         ) {
           const dates: Date[] = [];
@@ -279,7 +287,10 @@ router.patch(
                 where: {
                   lodgeId: reservation.lodgeId,
                   roomTypeId: reservation.roomTypeId,
-                  date,
+                  date: {
+                    gte: startOfDay(date),
+                    lt: startOfDay(addDays(date, 1)),
+                  },
                 },
                 data: {
                   availableRooms: {
@@ -290,11 +301,6 @@ router.patch(
             )
           );
         }
-
-        const updated = await tx.reservation.update({
-          where: { id: reservationId },
-          data: { status: "CANCELLED" },
-        });
 
         return updated;
       });
@@ -314,10 +320,15 @@ router.get("/", authToken, async (req: AuthRequest, res) => {
     const reservations = await prisma.reservation.findMany({
       where: {
         userId: userId ? Number(userId) : undefined,
-        OR : [
-          {status: {not:"CANCELLED"}},
-          {AND: [{status: "CANCELLED"},{cancelReason: {not: "AUTO_EXPIRED"}}]}
-        ]
+        OR: [
+          { status: { not: "CANCELLED" } },
+          {
+            AND: [
+              { status: "CANCELLED" },
+              { cancelReason: { not: "AUTO_EXPIRED" } },
+            ],
+          },
+        ],
       },
       include: {
         lodge: true,
