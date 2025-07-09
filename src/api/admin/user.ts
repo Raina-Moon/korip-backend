@@ -6,7 +6,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 const prisma = new PrismaClient();
 const router = express.Router();
 
-router.get("/users", asyncHandler(async (_, res) => {
+router.get("/", asyncHandler(async (_, res) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -26,7 +26,7 @@ router.get("/users", asyncHandler(async (_, res) => {
   }
 }));
 
-router.delete("/users/:id", asyncHandler(async (req: AuthRequest, res) => {
+router.delete("/:id", asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
   const userId = Number(id)
 
