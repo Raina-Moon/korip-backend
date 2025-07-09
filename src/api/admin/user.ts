@@ -95,4 +95,50 @@ router.patch(
   })
 );
 
+router.get(
+  "/:id/reservations",
+  asyncHandler(async (req: AuthRequest, res) => {
+    const userId = Number(req.params.id);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const reservations = await prisma.reservation.findMany({
+      where: { userId },
+      include: {
+        lodge: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return res.status(200).json(reservations);
+  })
+);
+
+router.get(
+  "/:id/reviews",
+  asyncHandler(async (req: AuthRequest, res) => {
+    const userId = Number(req.params.id);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const reviews = await prisma.hotSpringLodgeReview.findMany({
+      where: { userId },
+      include: {
+        lodge: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return res.status(200).json(reviews);
+  })
+);
+
 export default router;
