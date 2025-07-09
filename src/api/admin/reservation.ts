@@ -83,7 +83,7 @@ router.patch(
         data: {
           status,
           cancelReason:
-            status === "CANCELED"
+            status === ReservationStatus.CANCELLED
               ? (cancelReason as CancelReason) || CancelReason.ADMIN_FORCED
               : null,
         },
