@@ -104,6 +104,14 @@ router.get(
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await prisma.reservation.count({
+      where: { userId },
+    });
+
     const reservations = await prisma.reservation.findMany({
       where: { userId },
       include: {
@@ -112,9 +120,11 @@ router.get(
       orderBy: {
         createdAt: "desc",
       },
+      skip,
+      take: limit,
     });
 
-    return res.status(200).json(reservations);
+    return res.status(200).json({ data: reservations, total, page, limit });
   })
 );
 
@@ -127,6 +137,14 @@ router.get(
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await prisma.hotSpringLodgeReview.count({
+      where: { userId },
+    });
+
     const reviews = await prisma.hotSpringLodgeReview.findMany({
       where: { userId },
       include: {
@@ -135,9 +153,11 @@ router.get(
       orderBy: {
         createdAt: "desc",
       },
+      skip,
+      take: limit,
     });
 
-    return res.status(200).json(reviews);
+    return res.status(200).json({ data: reviews, total, page, limit });
   })
 );
 
