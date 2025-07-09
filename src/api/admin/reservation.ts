@@ -9,23 +9,33 @@ const prisma = new PrismaClient();
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const reservation = await prisma.reservation.findMany({
-      include: {
-        lodge: true,
-        roomType: true,
-        user: {
-          select: {
-            id: true,
-            nickname: true,
-            email: true,
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const [reservations, total] = await prisma.$transaction([
+      prisma.reservation.findMany({
+        include: {
+          lodge: true,
+          roomType: true,
+          user: {
+            select: {
+              id: true,
+              nickname: true,
+              email: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    res.status(200).json(reservation);
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.reservation.count(),
+    ]);
+
+    return res.status(200).json({ data: reservations, total, page, limit });
   })
 );
 
