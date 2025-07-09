@@ -9,8 +9,13 @@ const router = express.Router();
 router.get(
   "/",
   asyncHandler(async (_, res) => {
+    const page = parseInt(_.query.page as string) || 1;
+    const limit = parseInt(_.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
     try {
-      const users = await prisma.user.findMany({
+      const [users, total] = await prisma.$transaction([
+      prisma.user.findMany({
         select: {
           id: true,
           email: true,
@@ -21,8 +26,12 @@ router.get(
         orderBy: {
           createdAt: "desc",
         },
-      });
-      res.status(200).json(users);
+        skip,
+        take: limit,
+      }),
+      prisma.user.count(),
+    ]);
+      res.status(200).json({ data: users, total, page, limit });
     } catch (err) {
       return res.status(500).json({ message: "Internal server error" });
     }
