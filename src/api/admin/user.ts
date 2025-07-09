@@ -95,4 +95,72 @@ router.patch(
   })
 );
 
+router.get(
+  "/:id/reservations",
+  asyncHandler(async (req: AuthRequest, res) => {
+    const userId = Number(req.params.id);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const [reservations, total] = await Promise.all([
+      prisma.reservation.findMany({
+        where: { userId },
+        include: {
+          lodge: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.reservation.count({
+        where: { userId },
+      }),
+    ]);
+
+    return res.status(200).json({ data: reservations, total, page, limit });
+  })
+);
+
+router.get(
+  "/:id/reviews",
+  asyncHandler(async (req: AuthRequest, res) => {
+    const userId = Number(req.params.id);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const [reviews,total] = await Promise.all([
+      prisma.hotSpringLodgeReview.findMany({
+        where: { userId },
+        include: {
+          lodge: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.hotSpringLodgeReview.count({
+        where: { userId },
+      }),
+    ]);
+
+    return res.status(200).json({ data: reviews, total, page, limit });
+  })
+);
+
 export default router;
