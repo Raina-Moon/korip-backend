@@ -104,25 +104,26 @@ router.get(
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    const total = await prisma.reservation.count({
-      where: { userId },
-    });
-
-    const reservations = await prisma.reservation.findMany({
-      where: { userId },
-      include: {
-        lodge: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      skip,
-      take: limit,
-    });
+    const [reservations, total] = await Promise.all([
+      prisma.reservation.findMany({
+        where: { userId },
+        include: {
+          lodge: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.reservation.count({
+        where: { userId },
+      }),
+    ]);
 
     return res.status(200).json({ data: reservations, total, page, limit });
   })
@@ -137,25 +138,26 @@ router.get(
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    const total = await prisma.hotSpringLodgeReview.count({
-      where: { userId },
-    });
-
-    const reviews = await prisma.hotSpringLodgeReview.findMany({
-      where: { userId },
-      include: {
-        lodge: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      skip,
-      take: limit,
-    });
+    const [reviews,total] = await Promise.all([
+      prisma.hotSpringLodgeReview.findMany({
+        where: { userId },
+        include: {
+          lodge: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.hotSpringLodgeReview.count({
+        where: { userId },
+      }),
+    ]);
 
     return res.status(200).json({ data: reviews, total, page, limit });
   })
