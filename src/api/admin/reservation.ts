@@ -53,10 +53,15 @@ router.get(
 );
 
 router.patch(
-  "/:id/confirm",
+  "/:id",
   asyncHandler(async (req, res) => {
     const { status, cancelReason } = req.body;
-    if (!Object.values(ReservationStatus).includes(status)) {
+    
+    if(!status) { 
+      return res.status(400).json({ message: "Status is required" });
+    }
+
+    if(!Object.values(ReservationStatus).includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
