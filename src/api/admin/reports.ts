@@ -5,28 +5,45 @@ import { asyncHandler } from "../../utils/asyncHandler";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.get("/", async (req, res) => {
-  try {
-    const reported = await prisma.reportReview.findMany({
-      include: {
-        review: {
+router.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    try {
+      const [reported, total] = await prisma.$transaction([
+        prisma.reportReview.findMany({
           include: {
-            lodge: true,
+            review: {
+              include: {
+                lodge: true,
+                user: true,
+              },
+            },
             user: true,
           },
-        },
-        user: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    res.status(200).json(reported);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
+          orderBy: {
+            createdAt: "desc",
+          },
+          skip,
+          take: limit,
+        }),
+        prisma.reportReview.count(),
+      ]);
+      res.status(200).json({
+        data: reported,
+        total,
+        page,
+        limit,
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
 
 router.delete(
   "/report-only/:reviewId",
@@ -93,12 +110,10 @@ router.delete(
         where: { id: Number(reviewId) },
       });
 
-      res
-        .status(200)
-        .json({
-          message: "Review deleted successfully",
-          reviewId: Number(reviewId),
-        });
+      res.status(200).json({
+        message: "Review deleted successfully",
+        reviewId: Number(reviewId),
+      });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
