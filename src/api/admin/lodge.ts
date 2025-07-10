@@ -666,22 +666,23 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 router.delete("/:id", (async (req, res) => {
   try {
     const { id } = req.params;
+    const lodgeId = Number(id);
 
     const existingLodge = await prisma.hotSpringLodge.findUnique({
-      where: { id: Number(id) },
+      where: { id: lodgeId },
     });
     if (!existingLodge) {
       return res.status(404).json({ message: "Lodge not found" });
     }
 
     const roomTypes = await prisma.roomType.findMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     const roomTypeIds = roomTypes.map((rt) => rt.id);
 
     const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await Promise.all(
@@ -699,35 +700,50 @@ router.delete("/:id", (async (req, res) => {
     });
 
     await prisma.roomInventory.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.roomType.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
+    });
+
+    const ticketTypes = await prisma.ticketType.findMany({
+      where: { lodgeId },
+    });
+    const ticketTypeIds = ticketTypes.map((tt) => tt.id);
+
+    await prisma.ticketInventory.deleteMany({
+      where: {
+        OR: [{ lodgeId }, { ticketTypeId: { in: ticketTypeIds } }],
+      },
+    });
+
+    await prisma.ticketType.deleteMany({
+      where: { lodgeId },
     });
 
     await prisma.hotSpringLodgeImage.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.reservation.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.hotSpringLodgeBookmark.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.hotSpringLodgeDetail.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.hotSpringLodgeReview.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     const deleted = await prisma.hotSpringLodge.delete({
-      where: { id: Number(id) },
+      where: { id: lodgeId },
     });
 
     res
