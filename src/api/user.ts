@@ -2,7 +2,6 @@ import { PrismaClient } from "@prisma/client";
 import express from "express";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
-import { start } from "repl";
 import { addDays, startOfDay } from "date-fns";
 
 const router = express.Router();
