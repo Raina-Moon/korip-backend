@@ -189,6 +189,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
                 description: ticket.description,
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
+                totalTickets: ticket.totalTickets,
               },
             });
 
@@ -202,6 +203,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
             await tx.ticketInventory.createMany({
               data: dates.map((date) => ({
+                lodgeId: lodge.id,
                 ticketTypeId: newTicketType.id,
                 date,
                 totalTickets: ticket.totalTickets,
@@ -593,6 +595,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
             await tx.ticketInventory.createMany({
               data: dates.map((date) => ({
+                lodgeId: updated.id,
                 ticketTypeId: ticket.id!,
                 date,
                 totalTickets: ticket.totalTickets,
@@ -607,6 +610,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 description: ticket.description,
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
+                totalTickets: ticket.totalTickets,
               },
             });
 
@@ -624,6 +628,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 date,
                 totalTickets: ticket.totalTickets,
                 availableTickets: ticket.totalTickets,
+                lodgeId: updated.id,
               })),
             });
           }
