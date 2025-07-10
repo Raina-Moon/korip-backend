@@ -11,10 +11,7 @@ interface TicketInput {
   description?: string;
   adultPrice: number;
   childPrice: number;
-  inventories: {
-    date: string;
-    totalTickets: number;
-  }[];
+  totalTickets: number;
 }
 
 const router = express.Router();
@@ -195,19 +192,22 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
               },
             });
 
-            if (
-              Array.isArray(ticket.inventories) &&
-              ticket.inventories.length > 0
-            ) {
-              await tx.ticketInventory.createMany({
-                data: ticket.inventories.map((inv: any) => ({
-                  ticketTypeId: newTicketType.id,
-                  date: new Date(inv.date),
-                  totalTickets: inv.totalTickets,
-                  availableTickets: inv.totalTickets,
-                })),
-              });
+            const today = new Date();
+            const dates: Date[] = [];
+            for (let i = 0; i < 365; i++) {
+              const d = new Date(today);
+              d.setDate(today.getDate() + i);
+              dates.push(d);
             }
+
+            await tx.ticketInventory.createMany({
+              data: dates.map((date) => ({
+                ticketTypeId: newTicketType.id,
+                date,
+                totalTickets: ticket.totalTickets,
+                availableTickets: ticket.totalTickets,
+              })),
+            });
 
             return newTicketType;
           })
@@ -569,7 +569,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
         for (const ticket of ticketTypes) {
           if (ticket.id) {
-            // UPDATE
             await tx.ticketType.update({
               where: { id: ticket.id },
               data: {
@@ -583,19 +582,23 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             await tx.ticketInventory.deleteMany({
               where: { ticketTypeId: ticket.id },
             });
-            if (
-              Array.isArray(ticket.inventories) &&
-              ticket.inventories.length
-            ) {
-              await tx.ticketInventory.createMany({
-                data: ticket.inventories.map((inv) => ({
-                  ticketTypeId: ticket.id!,
-                  date: new Date(inv.date),
-                  totalTickets: inv.totalTickets,
-                  availableTickets: inv.totalTickets,
-                })),
-              });
+
+            const today = new Date();
+            const dates: Date[] = [];
+            for (let i = 0; i < 365; i++) {
+              const d = new Date(today);
+              d.setDate(today.getDate() + i);
+              dates.push(d);
             }
+
+            await tx.ticketInventory.createMany({
+              data: dates.map((date) => ({
+                ticketTypeId: ticket.id!,
+                date,
+                totalTickets: ticket.totalTickets,
+                availableTickets: ticket.totalTickets,
+              })),
+            });
           } else {
             const newTicket = await tx.ticketType.create({
               data: {
@@ -606,19 +609,23 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 childPrice: ticket.childPrice,
               },
             });
-            if (
-              Array.isArray(ticket.inventories) &&
-              ticket.inventories.length
-            ) {
-              await tx.ticketInventory.createMany({
-                data: ticket.inventories.map((inv) => ({
-                  ticketTypeId: newTicket.id,
-                  date: new Date(inv.date),
-                  totalTickets: inv.totalTickets,
-                  availableTickets: inv.totalTickets,
-                })),
-              });
+
+            const today = new Date();
+            const dates: Date[] = [];
+            for (let i = 0; i < 365; i++) {
+              const d = new Date(today);
+              d.setDate(today.getDate() + i);
+              dates.push(d);
             }
+
+            await tx.ticketInventory.createMany({
+              data: dates.map((date) => ({
+                ticketTypeId: newTicket.id,
+                date,
+                totalTickets: ticket.totalTickets,
+                availableTickets: ticket.totalTickets,
+              })),
+            });
           }
         }
 
