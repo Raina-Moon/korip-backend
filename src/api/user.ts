@@ -64,10 +64,19 @@ router.patch(
     }
 
     try {
+      const existingUser = await prisma.user.findUnique({
+        where: { nickname },
+      });
+
+      if (existingUser && existingUser.id !== Number(userId)) {
+        return res.status(400).json({ message: "Nickname already exists" });
+      }
+
       await prisma.user.update({
         where: { id: Number(userId) },
         data: { nickname },
       });
+
       res.status(200).json({ message: "Nickname updated successfully" });
     } catch (err) {
       console.error(err);
