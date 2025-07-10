@@ -5,6 +5,15 @@ import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
 import { v4 as uuidv4 } from "uuid";
 import { deleteFromCloudinary } from "../../utils/deleteFromCloudinary";
 
+interface TicketInput {
+  id?: number;
+  name: string;
+  description?: string;
+  adultPrice: number;
+  childPrice: number;
+  totalTickets: number;
+}
+
 const router = express.Router();
 const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -69,6 +78,8 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
       return uploaded;
     })
   );
+
+  const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
 
   try {
     const result = await prisma.$transaction(
@@ -169,7 +180,46 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
           data: inventoryData,
         });
 
-        return { lodge, roomTypes: createRoomTypes };
+        const createdTicketTypes = await Promise.all(
+          ticketTypes.map(async (ticket: TicketInput) => {
+            const newTicketType = await tx.ticketType.create({
+              data: {
+                lodgeId: lodge.id,
+                name: ticket.name,
+                description: ticket.description,
+                adultPrice: ticket.adultPrice,
+                childPrice: ticket.childPrice,
+                totalTickets: ticket.totalTickets,
+              },
+            });
+
+            const today = new Date();
+            const dates: Date[] = [];
+            for (let i = 0; i < 365; i++) {
+              const d = new Date(today);
+              d.setDate(today.getDate() + i);
+              dates.push(d);
+            }
+
+            await tx.ticketInventory.createMany({
+              data: dates.map((date) => ({
+                lodgeId: lodge.id,
+                ticketTypeId: newTicketType.id,
+                date,
+                totalTickets: ticket.totalTickets,
+                availableTickets: ticket.totalTickets,
+              })),
+            });
+
+            return newTicketType;
+          })
+        );
+
+        return {
+          lodge,
+          roomTypes: createRoomTypes,
+          ticketTypes: createdTicketTypes,
+        };
       }
     );
     console.log("Request:", req.body);
@@ -205,6 +255,7 @@ router.get("/:id", (async (req, res) => {
             images: true,
           },
         },
+        ticketTypes: true,
       },
     });
 
@@ -218,6 +269,7 @@ router.get("/:id", (async (req, res) => {
         ...roomType,
         seasonalPricing: roomType.seasonalPricing,
       })),
+      ticketTypes: lodge.ticketTypes,
     });
   } catch (err) {
     console.error(err);
@@ -296,6 +348,8 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         });
       }
     }
+
+    const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
 
     try {
       const result = await prisma.$transaction(async (tx) => {
@@ -494,6 +548,94 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           });
         }
 
+        const existingTicketTypes = await tx.ticketType.findMany({
+          where: { lodgeId: Number(id) },
+        });
+
+        const existingTicketTypeIds = existingTicketTypes.map((t) => t.id);
+
+        const requestTicketTypeIds = ticketTypes
+          .filter((t) => t.id)
+          .map((t) => t.id);
+
+        const toDeleteTicketTypeIds = existingTicketTypeIds.filter(
+          (id) => !requestTicketTypeIds.includes(id)
+        );
+
+        if (toDeleteTicketTypeIds.length) {
+          await tx.ticketInventory.deleteMany({
+            where: { ticketTypeId: { in: toDeleteTicketTypeIds } },
+          });
+          await tx.ticketType.deleteMany({
+            where: { id: { in: toDeleteTicketTypeIds } },
+          });
+        }
+
+        for (const ticket of ticketTypes) {
+          if (ticket.id) {
+            await tx.ticketType.update({
+              where: { id: ticket.id },
+              data: {
+                name: ticket.name,
+                description: ticket.description,
+                adultPrice: ticket.adultPrice,
+                childPrice: ticket.childPrice,
+              },
+            });
+
+            await tx.ticketInventory.deleteMany({
+              where: { ticketTypeId: ticket.id },
+            });
+
+            const today = new Date();
+            const dates: Date[] = [];
+            for (let i = 0; i < 365; i++) {
+              const d = new Date(today);
+              d.setDate(today.getDate() + i);
+              dates.push(d);
+            }
+
+            await tx.ticketInventory.createMany({
+              data: dates.map((date) => ({
+                lodgeId: updated.id,
+                ticketTypeId: ticket.id!,
+                date,
+                totalTickets: ticket.totalTickets,
+                availableTickets: ticket.totalTickets,
+              })),
+            });
+          } else {
+            const newTicket = await tx.ticketType.create({
+              data: {
+                lodgeId: Number(id),
+                name: ticket.name,
+                description: ticket.description,
+                adultPrice: ticket.adultPrice,
+                childPrice: ticket.childPrice,
+                totalTickets: ticket.totalTickets,
+              },
+            });
+
+            const today = new Date();
+            const dates: Date[] = [];
+            for (let i = 0; i < 365; i++) {
+              const d = new Date(today);
+              d.setDate(today.getDate() + i);
+              dates.push(d);
+            }
+
+            await tx.ticketInventory.createMany({
+              data: dates.map((date) => ({
+                ticketTypeId: newTicket.id,
+                date,
+                totalTickets: ticket.totalTickets,
+                availableTickets: ticket.totalTickets,
+                lodgeId: updated.id,
+              })),
+            });
+          }
+        }
+
         return { updated, uploadedLodgeImages };
       }); // <-- moved closing brace and parenthesis here
 
@@ -526,22 +668,23 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 router.delete("/:id", (async (req, res) => {
   try {
     const { id } = req.params;
+    const lodgeId = Number(id);
 
     const existingLodge = await prisma.hotSpringLodge.findUnique({
-      where: { id: Number(id) },
+      where: { id: lodgeId },
     });
     if (!existingLodge) {
       return res.status(404).json({ message: "Lodge not found" });
     }
 
     const roomTypes = await prisma.roomType.findMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     const roomTypeIds = roomTypes.map((rt) => rt.id);
 
     const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await Promise.all(
@@ -559,35 +702,50 @@ router.delete("/:id", (async (req, res) => {
     });
 
     await prisma.roomInventory.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.roomType.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
+    });
+
+    const ticketTypes = await prisma.ticketType.findMany({
+      where: { lodgeId },
+    });
+    const ticketTypeIds = ticketTypes.map((tt) => tt.id);
+
+    await prisma.ticketInventory.deleteMany({
+      where: {
+        OR: [{ lodgeId }, { ticketTypeId: { in: ticketTypeIds } }],
+      },
+    });
+
+    await prisma.ticketType.deleteMany({
+      where: { lodgeId },
     });
 
     await prisma.hotSpringLodgeImage.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.reservation.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.hotSpringLodgeBookmark.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.hotSpringLodgeDetail.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     await prisma.hotSpringLodgeReview.deleteMany({
-      where: { lodgeId: Number(id) },
+      where: { lodgeId: lodgeId },
     });
 
     const deleted = await prisma.hotSpringLodge.delete({
-      where: { id: Number(id) },
+      where: { id: lodgeId },
     });
 
     res

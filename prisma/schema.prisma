@@ -33,6 +33,14 @@ model User {
   ReportReview ReportReview[]
 
   EmailVerification EmailVerification[]
+
+  ticketReservations TicketReservation[]
+
+  ticketReviews TicketReview[]
+
+  ticketBookmarks TicketBookmark[]
+
+  TicketReportReview TicketReportReview[]
 }
 
 model EmailVerification {
@@ -75,6 +83,10 @@ model HotSpringLodge {
   inventories RoomInventory[]
 
   roomTypes RoomType[]
+
+  ticketTypes TicketType[]
+
+  TicketInventory TicketInventory[]
 }
 
 model HotSpringLodgeReview {
@@ -225,4 +237,93 @@ model ReportReview {
 
   review HotSpringLodgeReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   user   User                 @relation(fields: [userId], references: [id])
+}
+
+model TicketType {
+  id           Int      @id @default(autoincrement())
+  lodgeId      Int
+  name         String
+  description  String?
+  adultPrice   Int
+  childPrice   Int
+  totalTickets Int
+  createdAt    DateTime @default(now())
+
+  lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
+
+  inventories  TicketInventory[]
+  reservations TicketReservation[]
+  reviews      TicketReview[]
+  bookmarks    TicketBookmark[]
+}
+
+model TicketInventory {
+  id               Int      @id @default(autoincrement())
+  lodgeId          Int
+  ticketTypeId     Int
+  date             DateTime
+  totalTickets     Int
+  availableTickets Int
+
+  ticketType TicketType     @relation(fields: [ticketTypeId], references: [id])
+  lodge      HotSpringLodge @relation(fields: [lodgeId], references: [id])
+}
+
+model TicketReservation {
+  id           Int               @id @default(autoincrement())
+  ticketTypeId Int
+  userId       Int
+  date         DateTime
+  adults       Int
+  children     Int
+  totalPrice   Int?
+  createdAt    DateTime          @default(now())
+  status       ReservationStatus @default(PENDING)
+  cancelReason CancelReason?
+
+  firstName       String
+  lastName        String
+  nationality     String
+  phoneNumber     String
+  email           String?
+  specialRequests String?
+
+  ticketType TicketType @relation(fields: [ticketTypeId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+}
+
+model TicketReview {
+  id           Int      @id @default(autoincrement())
+  ticketTypeId Int
+  userId       Int
+  rating       Int
+  comment      String?
+  createdAt    DateTime @default(now())
+  isHidden     Boolean  @default(false)
+
+  ticketType TicketType @relation(fields: [ticketTypeId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+
+  reports TicketReportReview[]
+}
+
+model TicketBookmark {
+  id           Int      @id @default(autoincrement())
+  ticketTypeId Int
+  userId       Int
+  createdAt    DateTime @default(now())
+
+  ticketType TicketType @relation(fields: [ticketTypeId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+}
+
+model TicketReportReview {
+  id        Int      @id @default(autoincrement())
+  reviewId  Int
+  userId    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  review TicketReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id])
 }
