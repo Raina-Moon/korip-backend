@@ -255,6 +255,7 @@ router.get("/:id", (async (req, res) => {
             images: true,
           },
         },
+        ticketTypes: true,
       },
     });
 
@@ -268,6 +269,7 @@ router.get("/:id", (async (req, res) => {
         ...roomType,
         seasonalPricing: roomType.seasonalPricing,
       })),
+      ticketTypes: lodge.ticketTypes,
     });
   } catch (err) {
     console.error(err);
