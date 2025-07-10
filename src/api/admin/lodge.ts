@@ -5,6 +5,17 @@ import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
 import { v4 as uuidv4 } from "uuid";
 import { deleteFromCloudinary } from "../../utils/deleteFromCloudinary";
 
+interface TicketInput {
+  name: string;
+  description?: string;
+  adultPrice: number;
+  childPrice: number;
+  inventories: {
+    date: string;
+    totalTickets: number;
+  }[];
+}
+
 const router = express.Router();
 const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -69,6 +80,8 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
       return uploaded;
     })
   );
+
+  const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
 
   try {
     const result = await prisma.$transaction(
@@ -169,7 +182,41 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
           data: inventoryData,
         });
 
-        return { lodge, roomTypes: createRoomTypes };
+        const createdTicketTypes = await Promise.all(
+          ticketTypes.map(async (ticket: TicketInput) => {
+            const newTicketType = await tx.ticketType.create({
+              data: {
+                lodgeId: lodge.id,
+                name: ticket.name,
+                description: ticket.description,
+                adultPrice: ticket.adultPrice,
+                childPrice: ticket.childPrice,
+              },
+            });
+
+            if (
+              Array.isArray(ticket.inventories) &&
+              ticket.inventories.length > 0
+            ) {
+              await tx.ticketInventory.createMany({
+                data: ticket.inventories.map((inv: any) => ({
+                  ticketTypeId: newTicketType.id,
+                  date: new Date(inv.date),
+                  totalTickets: inv.totalTickets,
+                  availableTickets: inv.totalTickets,
+                })),
+              });
+            }
+
+            return newTicketType;
+          })
+        );
+
+        return {
+          lodge,
+          roomTypes: createRoomTypes,
+          ticketTypes: createdTicketTypes,
+        };
       }
     );
     console.log("Request:", req.body);
