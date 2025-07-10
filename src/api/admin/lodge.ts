@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { deleteFromCloudinary } from "../../utils/deleteFromCloudinary";
 
 interface TicketInput {
+  id?: number;
   name: string;
   description?: string;
   adultPrice: number;
@@ -344,6 +345,8 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       }
     }
 
+    const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
+
     try {
       const result = await prisma.$transaction(async (tx) => {
         const updated = await tx.hotSpringLodge.update({
@@ -539,6 +542,84 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
               totalRooms: roomType.totalRooms,
             })),
           });
+        }
+
+        const existingTicketTypes = await tx.ticketType.findMany({
+          where: { lodgeId: Number(id) },
+        });
+
+        const existingTicketTypeIds = existingTicketTypes.map((t) => t.id);
+
+        const requestTicketTypeIds = ticketTypes
+          .filter((t) => t.id)
+          .map((t) => t.id);
+
+        const toDeleteTicketTypeIds = existingTicketTypeIds.filter(
+          (id) => !requestTicketTypeIds.includes(id)
+        );
+
+        if (toDeleteTicketTypeIds.length) {
+          await tx.ticketInventory.deleteMany({
+            where: { ticketTypeId: { in: toDeleteTicketTypeIds } },
+          });
+          await tx.ticketType.deleteMany({
+            where: { id: { in: toDeleteTicketTypeIds } },
+          });
+        }
+
+        for (const ticket of ticketTypes) {
+          if (ticket.id) {
+            // UPDATE
+            await tx.ticketType.update({
+              where: { id: ticket.id },
+              data: {
+                name: ticket.name,
+                description: ticket.description,
+                adultPrice: ticket.adultPrice,
+                childPrice: ticket.childPrice,
+              },
+            });
+
+            await tx.ticketInventory.deleteMany({
+              where: { ticketTypeId: ticket.id },
+            });
+            if (
+              Array.isArray(ticket.inventories) &&
+              ticket.inventories.length
+            ) {
+              await tx.ticketInventory.createMany({
+                data: ticket.inventories.map((inv) => ({
+                  ticketTypeId: ticket.id!,
+                  date: new Date(inv.date),
+                  totalTickets: inv.totalTickets,
+                  availableTickets: inv.totalTickets,
+                })),
+              });
+            }
+          } else {
+            const newTicket = await tx.ticketType.create({
+              data: {
+                lodgeId: Number(id),
+                name: ticket.name,
+                description: ticket.description,
+                adultPrice: ticket.adultPrice,
+                childPrice: ticket.childPrice,
+              },
+            });
+            if (
+              Array.isArray(ticket.inventories) &&
+              ticket.inventories.length
+            ) {
+              await tx.ticketInventory.createMany({
+                data: ticket.inventories.map((inv) => ({
+                  ticketTypeId: newTicket.id,
+                  date: new Date(inv.date),
+                  totalTickets: inv.totalTickets,
+                  availableTickets: inv.totalTickets,
+                })),
+              });
+            }
+          }
         }
 
         return { updated, uploadedLodgeImages };
