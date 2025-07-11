@@ -81,6 +81,8 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
   const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
 
+  console.log("Request body ticket:", req.body.ticketTypes);
+  
   try {
     const result = await prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
