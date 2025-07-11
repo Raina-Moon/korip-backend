@@ -613,6 +613,8 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 description: ticket.description,
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
+                totalAdultTickets: ticket.totalAdultTickets,
+                totalChildTickets: ticket.totalChildTickets,
               },
             });
 
