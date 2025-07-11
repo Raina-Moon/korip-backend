@@ -616,29 +616,55 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
               },
             });
 
-            await tx.ticketInventory.deleteMany({
-              where: { ticketTypeId: ticket.id },
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const inventories = await tx.ticketInventory.findMany({
+              where: {
+                lodgeId: updated.id,
+                ticketTypeId: ticket.id,
+                date: { gte: today },
+              },
             });
 
-            const today = new Date();
-            const dates: Date[] = [];
-            for (let i = 0; i < 365; i++) {
-              const d = new Date(today);
-              d.setDate(today.getDate() + i);
-              dates.push(d);
+            const existing = existingTicketTypes.find(
+              (t) => t.id === ticket.id
+            );
+            if (!existing) continue;
+
+            const adultChanged =
+              ticket.totalAdultTickets !== existing.totalAdultTickets;
+            const childChanged =
+              ticket.totalChildTickets !== existing.totalChildTickets;
+
+            if (!adultChanged && !childChanged) {
+              continue;
             }
 
-            await tx.ticketInventory.createMany({
-              data: dates.map((date) => ({
-                lodgeId: updated.id,
-                ticketTypeId: ticket.id!,
-                date,
-                totalAdultTickets: ticket.totalAdultTickets,
-                totalChildTickets: ticket.totalChildTickets,
-                availableAdultTickets: ticket.totalAdultTickets,
-                availableChildTickets: ticket.totalChildTickets,
-              })),
-            });
+            for (const inv of inventories) {
+              const reservedAdult =
+                existing.totalAdultTickets - inv.availableAdultTickets;
+              const reservedChild =
+                existing.totalChildTickets - inv.availableChildTickets;
+
+              const newAvailableAdult = Math.max(
+                ticket.totalAdultTickets - reservedAdult,
+                0
+              );
+              const newAvailableChild = Math.max(
+                ticket.totalChildTickets - reservedChild,
+                0
+              );
+
+              await tx.ticketInventory.update({
+                where: { id: inv.id },
+                data: {
+                  totalAdultTickets: ticket.totalAdultTickets,
+                  totalChildTickets: ticket.totalChildTickets,
+                  availableAdultTickets: newAvailableAdult,
+                  availableChildTickets: newAvailableChild,
+                },
+              });
+            }
           } else {
             const newTicket = await tx.ticketType.create({
               data: {
