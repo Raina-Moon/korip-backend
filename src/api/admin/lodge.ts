@@ -82,7 +82,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
 
   console.log("Request body ticket:", req.body.ticketTypes);
-  
+
   try {
     const result = await prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -184,6 +184,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
         const createdTicketTypes = await Promise.all(
           ticketTypes.map(async (ticket: TicketInput) => {
+            console.log("Creating ticket type:", ticket);
             const newTicketType = await tx.ticketType.create({
               data: {
                 lodgeId: lodge.id,
