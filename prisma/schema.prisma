@@ -240,14 +240,15 @@ model ReportReview {
 }
 
 model TicketType {
-  id           Int      @id @default(autoincrement())
-  lodgeId      Int
-  name         String
-  description  String?
-  adultPrice   Int
-  childPrice   Int
-  totalTickets Int
-  createdAt    DateTime @default(now())
+  id                Int      @id @default(autoincrement())
+  lodgeId           Int
+  name              String
+  description       String?
+  adultPrice        Int
+  childPrice        Int
+  totalAdultTickets Int
+  totalChildTickets Int
+  createdAt         DateTime @default(now())
 
   lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
 
@@ -258,12 +259,14 @@ model TicketType {
 }
 
 model TicketInventory {
-  id               Int      @id @default(autoincrement())
-  lodgeId          Int
-  ticketTypeId     Int
-  date             DateTime
-  totalTickets     Int
-  availableTickets Int
+  id                    Int      @id @default(autoincrement())
+  lodgeId               Int
+  ticketTypeId          Int
+  date                  DateTime
+  totalAdultTickets     Int
+  totalChildTickets     Int
+  availableAdultTickets Int
+  availableChildTickets Int
 
   ticketType TicketType     @relation(fields: [ticketTypeId], references: [id])
   lodge      HotSpringLodge @relation(fields: [lodgeId], references: [id])
