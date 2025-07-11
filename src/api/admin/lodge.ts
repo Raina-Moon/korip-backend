@@ -523,8 +523,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             }
           }
         }
-
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         const dates: Date[] = [];
         for (let i = 0; i < 365; i++) {
           const d = new Date(today);
@@ -535,19 +536,49 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         for (let i = 0; i < roomTypes.length; i++) {
           const roomType = roomTypes[i];
 
-          if (roomType.totalRooms < 1) {
-            throw new Error("Total rooms must be at least 1");
+          if (!roomType.id) {
+            const dates = [];
+            const startDate = new Date();
+            startDate.setHours(0, 0, 0, 0);
+            for (let d = 0; d < 365; d++) {
+              const date = new Date(startDate);
+              date.setDate(startDate.getDate() + d);
+              dates.push(date);
+            }
+
+            continue;
           }
 
-          await tx.roomInventory.createMany({
-            data: dates.map((date) => ({
+          const existing = existingRoomTypes.find((r) => r.id === roomType.id);
+          if (!existing) continue;
+
+          const totalChanged = roomType.totalRooms !== existing.totalRooms;
+
+          if (!totalChanged) {
+            continue;
+          }
+
+          const inventories = await tx.roomInventory.findMany({
+            where: {
               lodgeId: updated.id,
               roomTypeId: roomType.id,
-              date,
-              availableRooms: roomType.availableRooms,
-              totalRooms: roomType.totalRooms,
-            })),
+              date: { gte: today },
+            },
           });
+
+          for (const inv of inventories) {
+            const reserved = existing.totalRooms - inv.availableRooms;
+
+            const newAvailable = Math.max(roomType.totalRooms - reserved, 0);
+
+            await tx.roomInventory.update({
+              where: { id: inv.id },
+              data: {
+                totalRooms: roomType.totalRooms,
+                availableRooms: newAvailable,
+              },
+            });
+          }
         }
 
         const existingTicketTypes = await tx.ticketType.findMany({
