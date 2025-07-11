@@ -11,7 +11,8 @@ interface TicketInput {
   description?: string;
   adultPrice: number;
   childPrice: number;
-  totalTickets: number;
+  totalAdultTickets: number;
+  totalChildTickets: number;
 }
 
 const router = express.Router();
@@ -189,7 +190,8 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
                 description: ticket.description,
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
-                totalTickets: ticket.totalTickets,
+                totalAdultTickets: ticket.totalAdultTickets,
+                totalChildTickets: ticket.totalChildTickets,
               },
             });
 
@@ -206,8 +208,10 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
                 lodgeId: lodge.id,
                 ticketTypeId: newTicketType.id,
                 date,
-                totalTickets: ticket.totalTickets,
-                availableTickets: ticket.totalTickets,
+                totalAdultTickets: ticket.totalAdultTickets,
+                totalChildTickets: ticket.totalChildTickets,
+                availableAdultTickets: ticket.totalAdultTickets,
+                availableChildTickets: ticket.totalChildTickets,
               })),
             });
 
@@ -598,8 +602,10 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 lodgeId: updated.id,
                 ticketTypeId: ticket.id!,
                 date,
-                totalTickets: ticket.totalTickets,
-                availableTickets: ticket.totalTickets,
+                totalAdultTickets: ticket.totalAdultTickets,
+                totalChildTickets: ticket.totalChildTickets,
+                availableAdultTickets: ticket.totalAdultTickets,
+                availableChildTickets: ticket.totalChildTickets,
               })),
             });
           } else {
@@ -610,7 +616,8 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 description: ticket.description,
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
-                totalTickets: ticket.totalTickets,
+                totalAdultTickets: ticket.totalAdultTickets,
+                totalChildTickets: ticket.totalChildTickets,
               },
             });
 
@@ -626,8 +633,10 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
               data: dates.map((date) => ({
                 ticketTypeId: newTicket.id,
                 date,
-                totalTickets: ticket.totalTickets,
-                availableTickets: ticket.totalTickets,
+                totalAdultTickets: ticket.totalAdultTickets,
+                totalChildTickets: ticket.totalChildTickets,
+                availableAdultTickets: ticket.totalAdultTickets,
+                availableChildTickets: ticket.totalChildTickets,
                 lodgeId: updated.id,
               })),
             });
