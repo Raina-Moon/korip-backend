@@ -523,8 +523,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             }
           }
         }
-
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         const dates: Date[] = [];
         for (let i = 0; i < 365; i++) {
           const d = new Date(today);
@@ -535,19 +536,49 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         for (let i = 0; i < roomTypes.length; i++) {
           const roomType = roomTypes[i];
 
-          if (roomType.totalRooms < 1) {
-            throw new Error("Total rooms must be at least 1");
+          if (!roomType.id) {
+            const dates = [];
+            const startDate = new Date();
+            startDate.setHours(0, 0, 0, 0);
+            for (let d = 0; d < 365; d++) {
+              const date = new Date(startDate);
+              date.setDate(startDate.getDate() + d);
+              dates.push(date);
+            }
+
+            continue;
           }
 
-          await tx.roomInventory.createMany({
-            data: dates.map((date) => ({
+          const existing = existingRoomTypes.find((r) => r.id === roomType.id);
+          if (!existing) continue;
+
+          const totalChanged = roomType.totalRooms !== existing.totalRooms;
+
+          if (!totalChanged) {
+            continue;
+          }
+
+          const inventories = await tx.roomInventory.findMany({
+            where: {
               lodgeId: updated.id,
               roomTypeId: roomType.id,
-              date,
-              availableRooms: roomType.availableRooms,
-              totalRooms: roomType.totalRooms,
-            })),
+              date: { gte: today },
+            },
           });
+
+          for (const inv of inventories) {
+            const reserved = existing.totalRooms - inv.availableRooms;
+
+            const newAvailable = Math.max(roomType.totalRooms - reserved, 0);
+
+            await tx.roomInventory.update({
+              where: { id: inv.id },
+              data: {
+                totalRooms: roomType.totalRooms,
+                availableRooms: newAvailable,
+              },
+            });
+          }
         }
 
         const existingTicketTypes = await tx.ticketType.findMany({
@@ -582,32 +613,60 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 description: ticket.description,
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
+                totalAdultTickets: ticket.totalAdultTickets,
+                totalChildTickets: ticket.totalChildTickets,
               },
             });
 
-            await tx.ticketInventory.deleteMany({
-              where: { ticketTypeId: ticket.id },
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const inventories = await tx.ticketInventory.findMany({
+              where: {
+                lodgeId: updated.id,
+                ticketTypeId: ticket.id,
+                date: { gte: today },
+              },
             });
 
-            const today = new Date();
-            const dates: Date[] = [];
-            for (let i = 0; i < 365; i++) {
-              const d = new Date(today);
-              d.setDate(today.getDate() + i);
-              dates.push(d);
+            const existing = existingTicketTypes.find(
+              (t) => t.id === ticket.id
+            );
+            if (!existing) continue;
+
+            const adultChanged =
+              ticket.totalAdultTickets !== existing.totalAdultTickets;
+            const childChanged =
+              ticket.totalChildTickets !== existing.totalChildTickets;
+
+            if (!adultChanged && !childChanged) {
+              continue;
             }
 
-            await tx.ticketInventory.createMany({
-              data: dates.map((date) => ({
-                lodgeId: updated.id,
-                ticketTypeId: ticket.id!,
-                date,
-                totalAdultTickets: ticket.totalAdultTickets,
-                totalChildTickets: ticket.totalChildTickets,
-                availableAdultTickets: ticket.totalAdultTickets,
-                availableChildTickets: ticket.totalChildTickets,
-              })),
-            });
+            for (const inv of inventories) {
+              const reservedAdult =
+                existing.totalAdultTickets - inv.availableAdultTickets;
+              const reservedChild =
+                existing.totalChildTickets - inv.availableChildTickets;
+
+              const newAvailableAdult = Math.max(
+                ticket.totalAdultTickets - reservedAdult,
+                0
+              );
+              const newAvailableChild = Math.max(
+                ticket.totalChildTickets - reservedChild,
+                0
+              );
+
+              await tx.ticketInventory.update({
+                where: { id: inv.id },
+                data: {
+                  totalAdultTickets: ticket.totalAdultTickets,
+                  totalChildTickets: ticket.totalChildTickets,
+                  availableAdultTickets: newAvailableAdult,
+                  availableChildTickets: newAvailableChild,
+                },
+              });
+            }
           } else {
             const newTicket = await tx.ticketType.create({
               data: {
