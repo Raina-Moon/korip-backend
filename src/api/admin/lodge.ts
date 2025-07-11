@@ -222,8 +222,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
         };
       }
     );
-    console.log("Request:", req.body);
-    console.log("Files:", req.files);
 
     res.status(201).json({ message: "Lodge created successfully", ...result });
   } catch (err) {
