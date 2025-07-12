@@ -98,7 +98,11 @@ router.get(
       const ticket = await prisma.ticketType.findUnique({
         where: { id: Number(id) },
         include: {
-          lodge: true,
+          lodge: {
+            include: {
+              images: true,
+            },
+          },
         },
       });
 
@@ -185,6 +189,75 @@ router.get(
       });
 
       res.status(200).json(reviews);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.put(
+  "/review/:reviewId",
+  authToken,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { reviewId } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user?.userId;
+
+    try {
+      const review = await prisma.ticketReview.findUnique({
+        where: { id: Number(reviewId) },
+      });
+
+      if (!review) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      if (review.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const updatedReview = await prisma.ticketReview.update({
+        where: { id: Number(reviewId) },
+        data: { rating, comment },
+        include: {
+          user: { select: { nickname: true } },
+        },
+      });
+
+      res.status(200).json(updatedReview);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.delete(
+  "/review/:reviewId",
+  authToken,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { reviewId } = req.params;
+    const userId = req.user?.userId;
+
+    try {
+      const review = await prisma.ticketReview.findUnique({
+        where: { id: Number(reviewId) },
+      });
+
+      if (!review) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      if (review.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      await prisma.ticketReview.delete({
+        where: { id: Number(reviewId) },
+      });
+
+      res.status(200).json({ message: "Review deleted successfully" });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
