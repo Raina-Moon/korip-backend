@@ -12,6 +12,7 @@ import bookmarkRouter from "./bookmark";
 import reportReviewRouter from "./report-review";
 import userRouter from "./user";
 import ticketRouter from "./ticket";
+import ticketBookmarkRouter from "./ticketBookmark";
 
 const router = express.Router();
 
@@ -26,7 +27,8 @@ router.use("/reservation", reservationRouter);
 router.use("/price", priceRouter);
 router.use("/bookmark", bookmarkRouter);
 router.use("/report-review", reportReviewRouter);
-router.use("/user",userRouter)
+router.use("/user", userRouter);
 router.use("/ticket", ticketRouter);
+router.use("/ticket-bookmark", ticketBookmarkRouter);
 
 export default router;
