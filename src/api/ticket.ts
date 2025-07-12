@@ -17,12 +17,21 @@ router.get(
     }
 
     const searchDate = new Date(String(date));
+    const startOfDay = new Date(searchDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
     const adultsNum = parseInt(String(adults)) || 1;
     const childrenNum = parseInt(String(children)) || 0;
 
     const inventories = await prisma.ticketInventory.findMany({
       where: {
-        date: searchDate,
+        date: {
+            gte: startOfDay,
+            lt: endOfDay,
+        },
         availableAdultTickets: {
           gte: adultsNum,
         },
