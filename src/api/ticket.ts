@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 router.get(
   "/search",
   asyncHandler(async (req, res) => {
-    const { region, date, adults, children } = req.query;
+    const { region, date, adults, children, sort } = req.query;
 
     if (!date || !adults) {
       return res
@@ -84,6 +84,25 @@ router.get(
     });
 
     const tickets = Array.from(ticketMap.values());
+
+    if (sort) {
+      switch (sort) {
+        case "adult_price_asc":
+          tickets.sort((a, b) => a.adultPrice - b.adultPrice);
+          break;
+        case "adult_price_desc":
+          tickets.sort((a, b) => b.adultPrice - a.adultPrice);
+          break;
+        case "child_price_asc":
+          tickets.sort((a, b) => a.childPrice - b.childPrice);
+          break;
+        case "child_price_desc":
+          tickets.sort((a, b) => b.childPrice - a.childPrice);
+          break;
+        default:
+          break;
+      }
+    }
 
     res.status(200).json(tickets);
   })
