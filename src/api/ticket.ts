@@ -1,6 +1,7 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { asyncHandler } from "../utils/asyncHandler";
+import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -29,8 +30,8 @@ router.get(
     const inventories = await prisma.ticketInventory.findMany({
       where: {
         date: {
-            gte: startOfDay,
-            lt: endOfDay,
+          gte: startOfDay,
+          lt: endOfDay,
         },
         availableAdultTickets: {
           gte: adultsNum,
@@ -85,6 +86,182 @@ router.get(
     const tickets = Array.from(ticketMap.values());
 
     res.status(200).json(tickets);
+  })
+);
+
+router.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const ticket = await prisma.ticketType.findUnique({
+        where: { id: Number(id) },
+        include: {
+          lodge: {
+            include: {
+              images: true,
+            },
+          },
+        },
+      });
+
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      res.status(200).json(ticket);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.post(
+  "/:id/review",
+  authToken,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user?.userId;
+
+    try {
+      const ticket = await prisma.ticketType.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      const existingReview = await prisma.ticketReview.findFirst({
+        where: {
+          ticketTypeId: ticket.id,
+          userId: userId!,
+        },
+      });
+
+      if (existingReview) {
+        return res
+          .status(400)
+          .json({ message: "You have already reviewed this ticket" });
+      }
+
+      const newReview = await prisma.ticketReview.create({
+        data: {
+          ticketTypeId: ticket.id,
+          userId: userId!,
+          rating,
+          comment,
+        },
+        include: {
+          ticketType: true,
+          user: {
+            select: { nickname: true },
+          },
+        },
+      });
+
+      res.status(201).json(newReview);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.get(
+  "/:id/reviews",
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    try {
+      const reviews = await prisma.ticketReview.findMany({
+        where: { ticketTypeId: Number(id) },
+        include: {
+          user: {
+            select: { nickname: true },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      res.status(200).json(reviews);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.put(
+  "/review/:reviewId",
+  authToken,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { reviewId } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user?.userId;
+
+    try {
+      const review = await prisma.ticketReview.findUnique({
+        where: { id: Number(reviewId) },
+      });
+
+      if (!review) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      if (review.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const updatedReview = await prisma.ticketReview.update({
+        where: { id: Number(reviewId) },
+        data: { rating, comment },
+        include: {
+          user: { select: { nickname: true } },
+        },
+      });
+
+      res.status(200).json(updatedReview);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.delete(
+  "/review/:reviewId",
+  authToken,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { reviewId } = req.params;
+    const userId = req.user?.userId;
+
+    try {
+      const review = await prisma.ticketReview.findUnique({
+        where: { id: Number(reviewId) },
+      });
+
+      if (!review) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      if (review.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      await prisma.ticketReview.delete({
+        where: { id: Number(reviewId) },
+      });
+
+      res.status(200).json({ message: "Review deleted successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   })
 );
 
