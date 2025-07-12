@@ -7,6 +7,8 @@ import reportsRouter from "./reports";
 import reservationRouter from "./reservation";
 import { authToken } from "../../middlewares/authMiddleware";
 import { isAdmin } from "../../middlewares/adminMiddleware";
+import ticketReportsRouter from "./ticketReports";
+import ticketReservationRouter from "./ticketReservation";
 
 const router = express.Router();
 
@@ -18,5 +20,7 @@ router.use("/room-type", roomTypeRouter);
 router.use("/room-inventory", roomInventoryRouter);
 router.use("/reports",reportsRouter);
 router.use("/reservation", reservationRouter);
+router.use("/ticket-reports", ticketReportsRouter);
+router.use("/ticket-reservation", ticketReservationRouter);
 
 export default router;
