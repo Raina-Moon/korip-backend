@@ -33,6 +33,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   const { hotSpringLodgeImages = [], roomTypeImages = [] } = req.files as {
     [key: string]: Express.Multer.File[];
   };
+  const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
 
   if (
     !name ||
@@ -42,7 +43,9 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
     !accommodationType ||
     !Array.isArray(roomTypes) ||
     roomTypes.length === 0 ||
-    hotSpringLodgeImages.length === 0
+    hotSpringLodgeImages.length === 0 ||
+    !Array.isArray(ticketTypes) ||
+    ticketTypes.length === 0
   ) {
     return res.status(400).json({ message: "All fields are required" });
   }
@@ -80,8 +83,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
       return uploaded;
     })
   );
-
-  const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
 
   try {
     const result = await prisma.$transaction(
