@@ -2,7 +2,7 @@ import { PrismaClient, CancelReason } from "@prisma/client";
 import express from "express";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
-import { startOfDay } from "date-fns";
+import { addDays, startOfDay } from "date-fns";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -128,10 +128,15 @@ router.post(
           throw new Error("Reservation cannot be confirmed");
         }
 
+        const date = new Date(reservation.date);
+
         const inventory = await tx.ticketInventory.findFirst({
           where: {
             ticketTypeId: reservation.ticketTypeId,
-            date: startOfDay(new Date(reservation.date)),
+            date: {
+              gte: startOfDay(date),
+              lt: startOfDay(addDays(date, 1)),
+            },
           },
         });
 
