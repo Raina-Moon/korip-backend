@@ -168,7 +168,7 @@ router.post(
         return updatedReservation;
       });
 
-      return res.status(200).json({ reservation: confirmed });
+      return res.status(200).json(confirmed);
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
