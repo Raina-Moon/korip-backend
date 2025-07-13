@@ -136,7 +136,9 @@ router.post(
         });
 
         if (!inventory) {
-          throw new Error("Inventory not found for selected date");
+          return res
+            .status(404)
+            .json({ error: "Inventory not found for selected date" });
         }
 
         if (
@@ -238,36 +240,40 @@ router.patch(
   })
 );
 
-router.get("/", authToken, asyncHandler(async (req: AuthRequest, res) => {
-  const userId = req.user?.userId;
+router.get(
+  "/",
+  authToken,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const userId = req.user?.userId;
 
-  try {
-    const reservations = await prisma.ticketReservation.findMany({
-      where: {
-        userId: userId ? Number(userId) : undefined,
-        OR: [
-          { status: { not: "CANCELLED" } },
-          {
-            AND: [
-              { status: "CANCELLED" },
-              { cancelReason: { not: "AUTO_EXPIRED" } },
-            ],
-          },
-        ],
-      },
-      include: {
-        ticketType: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    try {
+      const reservations = await prisma.ticketReservation.findMany({
+        where: {
+          userId: userId ? Number(userId) : undefined,
+          OR: [
+            { status: { not: "CANCELLED" } },
+            {
+              AND: [
+                { status: "CANCELLED" },
+                { cancelReason: { not: "AUTO_EXPIRED" } },
+              ],
+            },
+          ],
+        },
+        include: {
+          ticketType: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
 
-    res.status(200).json(reservations);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-}));
+      res.status(200).json(reservations);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
 
 export default router;
