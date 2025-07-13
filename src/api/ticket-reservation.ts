@@ -8,12 +8,8 @@ import { toZonedTime } from "date-fns-tz";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-function getKSTMidnightUTC(inputDate: string | Date): Date {
-  const KST = "Asia/Seoul";
-  const rawDate = new Date(inputDate);
-  const zoned = toZonedTime(rawDate, KST);
-  const startLocal = startOfDay(zoned);
-  return new Date(startLocal.toISOString());
+function toMidnightUTC(inputDate: string | Date): Date {
+  return startOfDay(new Date(inputDate));
 }
 
 router.post(
@@ -88,7 +84,7 @@ router.post(
           data: {
             ticketTypeId: Number(ticketTypeId),
             userId: userId!,
-            date: getKSTMidnightUTC(date),
+            date: toMidnightUTC(date),
             adults: Number(adults),
             children: Number(children),
             firstName,
@@ -137,7 +133,7 @@ router.post(
           throw new Error("Reservation cannot be confirmed");
         }
 
-        const normalizedDate = getKSTMidnightUTC(reservation.date);
+        const normalizedDate = toMidnightUTC(reservation.date);
 
         const inventory = await tx.ticketInventory.findFirst({
           where: {
@@ -230,7 +226,7 @@ router.patch(
           await tx.ticketInventory.updateMany({
             where: {
               ticketTypeId: reservation.ticketTypeId,
-              date: getKSTMidnightUTC(reservation.date),
+              date: toMidnightUTC(reservation.date),
             },
             data: {
               availableAdultTickets: {
