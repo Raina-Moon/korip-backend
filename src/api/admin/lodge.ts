@@ -4,6 +4,7 @@ import multer from "multer";
 import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
 import { v4 as uuidv4 } from "uuid";
 import { deleteFromCloudinary } from "../../utils/deleteFromCloudinary";
+import { startOfDay } from "date-fns";
 
 interface TicketInput {
   id?: number;
@@ -171,7 +172,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
           dates.map((date) => ({
             lodgeId: lodge.id,
             roomTypeId: roomType.id,
-            date,
+            date: startOfDay(date),
             totalRooms: roomType.totalRooms,
             availableRooms: roomType.totalRooms,
           }))
@@ -200,7 +201,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
             for (let i = 0; i < 365; i++) {
               const d = new Date(today);
               d.setDate(today.getDate() + i);
-              dates.push(d);
+              dates.push(startOfDay(d));
             }
 
             await tx.ticketInventory.createMany({
