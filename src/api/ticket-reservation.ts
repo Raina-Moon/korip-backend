@@ -3,9 +3,14 @@ import express from "express";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
 import { startOfDay, addDays } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+function toMidnightUTC(inputDate: string | Date): Date {
+  return startOfDay(new Date(inputDate));
+}
 
 router.post(
   "/",
@@ -79,7 +84,7 @@ router.post(
           data: {
             ticketTypeId: Number(ticketTypeId),
             userId: userId!,
-            date: startOfDay(new Date(date)),
+            date: toMidnightUTC(date),
             adults: Number(adults),
             children: Number(children),
             firstName,
@@ -128,10 +133,15 @@ router.post(
           throw new Error("Reservation cannot be confirmed");
         }
 
+        const normalizedDate = toMidnightUTC(reservation.date);
+
         const inventory = await tx.ticketInventory.findFirst({
           where: {
             ticketTypeId: reservation.ticketTypeId,
-            date: startOfDay(new Date(reservation.date)),
+            date: {
+              gte: normalizedDate,
+              lt: addDays(normalizedDate, 1),
+            },
           },
         });
 
@@ -216,7 +226,7 @@ router.patch(
           await tx.ticketInventory.updateMany({
             where: {
               ticketTypeId: reservation.ticketTypeId,
-              date: startOfDay(new Date(reservation.date)),
+              date: toMidnightUTC(reservation.date),
             },
             data: {
               availableAdultTickets: {
