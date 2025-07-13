@@ -2,7 +2,7 @@ import { PrismaClient, CancelReason } from "@prisma/client";
 import express from "express";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
-import { startOfDay, addDays } from "date-fns";
+import { startOfDay } from "date-fns";
 
 const router = express.Router();
 const prisma = new PrismaClient();
