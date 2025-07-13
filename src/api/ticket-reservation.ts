@@ -2,10 +2,19 @@ import { PrismaClient, CancelReason } from "@prisma/client";
 import express from "express";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
-import { addDays, startOfDay } from "date-fns";
+import { startOfDay, addDays } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+function getKSTMidnightUTC(inputDate: string | Date): Date {
+  const KST = "Asia/Seoul";
+  const rawDate = new Date(inputDate);
+  const zoned = toZonedTime(rawDate, KST);
+  const startLocal = startOfDay(zoned);
+  return new Date(startLocal.toISOString());
+}
 
 router.post(
   "/",
@@ -79,7 +88,7 @@ router.post(
           data: {
             ticketTypeId: Number(ticketTypeId),
             userId: userId!,
-            date: startOfDay(new Date(date)),
+            date: getKSTMidnightUTC(date),
             adults: Number(adults),
             children: Number(children),
             firstName,
@@ -128,14 +137,14 @@ router.post(
           throw new Error("Reservation cannot be confirmed");
         }
 
-        const date = new Date(reservation.date);
+        const normalizedDate = getKSTMidnightUTC(reservation.date);
 
         const inventory = await tx.ticketInventory.findFirst({
           where: {
             ticketTypeId: reservation.ticketTypeId,
             date: {
-              gte: startOfDay(date),
-              lt: startOfDay(addDays(date, 1)),
+              gte: normalizedDate,
+              lt: addDays(normalizedDate, 1),
             },
           },
         });
@@ -221,7 +230,7 @@ router.patch(
           await tx.ticketInventory.updateMany({
             where: {
               ticketTypeId: reservation.ticketTypeId,
-              date: startOfDay(new Date(reservation.date)),
+              date: getKSTMidnightUTC(reservation.date),
             },
             data: {
               availableAdultTickets: {
