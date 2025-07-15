@@ -160,10 +160,11 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
         const generateDates = (days: number) => {
           const dates: Date[] = [];
           const today = new Date();
+          today.setHours(0, 0, 0, 0);
           for (let i = 0; i < days; i++) {
-            const nextDate = new Date(today);
-            nextDate.setDate(today.getDate() + i);
-            dates.push(startOfDay(nextDate));
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            dates.push(d);
           }
           return dates;
         };
@@ -217,7 +218,8 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
     res.status(201).json({ message: "Lodge created successfully", ...result });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Transaction error:", JSON.stringify(err, null, 2));
+    throw err;
   }
 }) as RequestHandler);
 
