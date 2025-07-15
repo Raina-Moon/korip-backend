@@ -167,21 +167,8 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
           }
           return dates;
         };
+
         const dates = generateDates(365);
-
-        const inventoryData = createRoomTypes.flatMap((roomType) =>
-          dates.map((date) => ({
-            lodgeId: lodge.id,
-            roomTypeId: roomType.id,
-            date: startOfDay(date),
-            totalRooms: roomType.totalRooms,
-            availableRooms: roomType.totalRooms,
-          }))
-        );
-
-        await tx.roomInventory.createMany({
-          data: inventoryData,
-        });
 
         const createdTicketTypes = await Promise.all(
           ticketTypes.map(async (ticket: TicketInput) => {
@@ -197,15 +184,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
               },
             });
 
-            const today = new Date();
-            const dates: Date[] = [];
-            for (let i = 0; i < 365; i++) {
-              const d = new Date(today);
-              d.setDate(today.getDate() + i);
-              dates.push(startOfDay(d));
-            }
-
-            await tx.ticketInventory.createMany({
+            const inventoryResult = await tx.ticketInventory.createMany({
               data: dates.map((date) => ({
                 lodgeId: lodge.id,
                 ticketTypeId: newTicketType.id,
@@ -215,7 +194,13 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
                 availableAdultTickets: ticket.totalAdultTickets,
                 availableChildTickets: ticket.totalChildTickets,
               })),
+              skipDuplicates: false,
             });
+
+            console.log(
+              "✅ ticketInventory.createMany result:",
+              inventoryResult
+            );
 
             return newTicketType;
           })
