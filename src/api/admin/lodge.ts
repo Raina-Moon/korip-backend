@@ -35,6 +35,8 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   };
   const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
 
+  console.log("📌 [POST /admin/lodge] Parsed ticketTypes:", ticketTypes);
+
   if (
     !name ||
     !address ||
