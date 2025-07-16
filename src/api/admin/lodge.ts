@@ -401,13 +401,25 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           where: { lodgeId: Number(id) },
         });
 
+        const existingIds = existingRoomTypes.map((r) => r.id);
+        const requestIds = roomTypes.filter((r) => r.id).map((r) => r.id);
+
+        const toDeleteIds = existingIds.filter(
+          (id) => !requestIds.includes(id)
+        );
+
+        if (toDeleteIds.length > 0) {
+          await tx.roomInventory.deleteMany({
+            where: { roomTypeId: { in: toDeleteIds } },
+          });
+          await tx.roomType.deleteMany({
+            where: { id: { in: toDeleteIds } },
+          });
+        }
+
         const roomTypeIds = existingRoomTypes.map((rt) => rt.id);
         await tx.seasonalPricing.deleteMany({
           where: { roomTypeId: { in: roomTypeIds } },
-        });
-
-        await tx.roomInventory.deleteMany({
-          where: { lodgeId: Number(id) },
         });
 
         const keepRoomTypeImageIdList = (keepRoomTypeImgIds || []).map(
@@ -515,17 +527,29 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 })),
               });
             }
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dates: Date[] = [];
+            for (let d = 0; d < 365; d++) {
+              const date = new Date(today);
+              date.setDate(today.getDate() + d);
+              dates.push(date);
+            }
+
+            await tx.roomInventory.createMany({
+              data: dates.map((date) => ({
+                lodgeId: updated.id,
+                roomTypeId: createdRoom.id,
+                date,
+                totalRooms: roomType.totalRooms,
+                availableRooms: roomType.totalRooms,
+              })),
+            });
           }
         }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
-        const dates: Date[] = [];
-        for (let i = 0; i < 365; i++) {
-          const d = new Date(today);
-          d.setDate(d.getDate() + i);
-          dates.push(d);
-        }
 
         for (let i = 0; i < roomTypes.length; i++) {
           const roomType = roomTypes[i];
