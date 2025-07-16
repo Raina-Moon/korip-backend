@@ -284,33 +284,4 @@ router.delete(
   })
 );
 
-router.get(
-  "/:id/inventories",
-  asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const lodgeId = Number(id);
-
-    if (isNaN(lodgeId)) {
-      return res.status(400).json({ message: "Invalid lodge ID" });
-    }
-
-    try {
-      const roomInventories = await prisma.roomInventory.findMany({
-        where: { lodgeId },
-        orderBy: { date: "asc" },
-      });
-
-      const ticketInventories = await prisma.ticketInventory.findMany({
-        where: { lodgeId },
-        orderBy: { date: "asc" },
-      });
-
-      res.json({ roomInventories, ticketInventories });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Failed to fetch inventories" });
-    }
-  })
-);
-
 export default router;
