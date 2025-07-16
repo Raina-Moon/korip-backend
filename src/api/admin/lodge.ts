@@ -830,11 +830,27 @@ router.get(
     try {
       const roomInventories = await prisma.roomInventory.findMany({
         where: { lodgeId },
+        include: {
+          roomType: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
         orderBy: { date: "asc" },
       });
 
       const ticketInventories = await prisma.ticketInventory.findMany({
         where: { lodgeId },
+        include: {
+          ticketType: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
         orderBy: { date: "asc" },
       });
 
