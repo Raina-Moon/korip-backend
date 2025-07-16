@@ -412,9 +412,14 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         );
 
         if (toDeleteIds.length > 0) {
+          await tx.roomTypeImage.deleteMany({
+            where: { roomTypeId: { in: toDeleteIds } },
+          });
+
           await tx.roomInventory.deleteMany({
             where: { roomTypeId: { in: toDeleteIds } },
           });
+          
           await tx.roomType.deleteMany({
             where: { id: { in: toDeleteIds } },
           });
@@ -530,7 +535,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 })),
               });
             }
-            
+
             const dates: Date[] = [];
             for (let d = 0; d < 365; d++) {
               const date = new Date(today);
@@ -549,7 +554,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             });
           }
         }
-
 
         for (let i = 0; i < roomTypes.length; i++) {
           const roomType = roomTypes[i];
