@@ -169,6 +169,18 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
         const dates = generateDates(365);
 
+        for (const roomType of createRoomTypes) {
+          await tx.roomInventory.createMany({
+            data: dates.map((date) => ({
+              lodgeId: lodge.id,
+              roomTypeId: roomType.id,
+              date,
+              totalRooms: roomType.totalRooms,
+              availableRooms: roomType.totalRooms,
+            })),
+          });
+        }
+
         const createdTicketTypes = await Promise.all(
           ticketTypes.map(async (ticket: TicketInput) => {
             const newTicketType = await tx.ticketType.create({
