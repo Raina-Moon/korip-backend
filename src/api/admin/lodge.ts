@@ -288,6 +288,24 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     };
     const roomTypeImageFiles = filesByField["roomTypeImages"] || [];
     const lodgeImageFiles = filesByField["hotSpringLodgeImages"] || [];
+    const roomTypeImagesCounts = JSON.parse(
+      req.body.roomTypeImagesCounts || "[]"
+    );
+
+    if (roomTypeImageFiles.length > 0) {
+
+      if (!roomTypeImagesCounts.length) {
+        return res.status(400).json({
+          message: "roomTypeImagesCounts missing despite images present",
+        });
+      }
+
+      if (roomTypeImagesCounts.length !== roomTypes.length) {
+        return res.status(400).json({
+          message: `roomTypeImagesCounts length (${roomTypeImagesCounts.length}) does not match roomTypes length (${roomTypes.length})`,
+        });
+      }
+    }
 
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
@@ -309,6 +327,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
     let uploadedLodgeImages: { imageUrl: string; publicId: string }[] = [];
     if (lodgeImageFiles?.length > 0) {
+
       uploadedLodgeImages = await Promise.all(
         lodgeImageFiles.map(async (img) => {
           const { imageUrl, publicId } = await uploadToCloudinary(
@@ -326,15 +345,24 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       publicId: string;
     }[] = [];
     if (Array.isArray(roomTypes) && roomTypeImageFiles.length > 0) {
+      let currentIndex = 0;
+
       for (let i = 0; i < roomTypes.length; i++) {
-        const files = roomTypeImageFiles.filter(
-          (_, idx) => Math.floor(idx / 100) === i
+        const count = roomTypeImagesCounts[i] || 0;
+        if (count === 0) continue;
+
+        const thisRoomFiles = roomTypeImageFiles.slice(
+          currentIndex,
+          currentIndex + count
         );
+        currentIndex += count;
+
         const uploads = await Promise.all(
-          files.map((file) =>
+          thisRoomFiles.map((file) =>
             uploadToCloudinary(file.buffer, `roomType_${i}_${uuidv4()}`)
           )
         );
+
         uploads.forEach((upload) => {
           roomTypeImageUpload.push({
             idx: i,
@@ -349,6 +377,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
     try {
       const result = await prisma.$transaction(async (tx) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         const updated = await tx.hotSpringLodge.update({
           where: { id: Number(id) },
           data: {
@@ -401,13 +432,30 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           where: { lodgeId: Number(id) },
         });
 
+        const existingIds = existingRoomTypes.map((r) => r.id);
+        const requestIds = roomTypes.filter((r) => r.id).map((r) => r.id);
+
+        const toDeleteIds = existingIds.filter(
+          (id) => !requestIds.includes(id)
+        );
+
+        if (toDeleteIds.length > 0) {
+          await tx.roomTypeImage.deleteMany({
+            where: { roomTypeId: { in: toDeleteIds } },
+          });
+
+          await tx.roomInventory.deleteMany({
+            where: { roomTypeId: { in: toDeleteIds } },
+          });
+
+          await tx.roomType.deleteMany({
+            where: { id: { in: toDeleteIds } },
+          });
+        }
+
         const roomTypeIds = existingRoomTypes.map((rt) => rt.id);
         await tx.seasonalPricing.deleteMany({
           where: { roomTypeId: { in: roomTypeIds } },
-        });
-
-        await tx.roomInventory.deleteMany({
-          where: { lodgeId: Number(id) },
         });
 
         const keepRoomTypeImageIdList = (keepRoomTypeImgIds || []).map(
@@ -515,16 +563,24 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 })),
               });
             }
-          }
-        }
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
 
-        const dates: Date[] = [];
-        for (let i = 0; i < 365; i++) {
-          const d = new Date(today);
-          d.setDate(d.getDate() + i);
-          dates.push(d);
+            const dates: Date[] = [];
+            for (let d = 0; d < 365; d++) {
+              const date = new Date(today);
+              date.setDate(today.getDate() + d);
+              dates.push(date);
+            }
+
+            await tx.roomInventory.createMany({
+              data: dates.map((date) => ({
+                lodgeId: updated.id,
+                roomTypeId: createdRoom.id,
+                date,
+                totalRooms: roomType.totalRooms,
+                availableRooms: roomType.totalRooms,
+              })),
+            });
+          }
         }
 
         for (let i = 0; i < roomTypes.length; i++) {
@@ -612,8 +668,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
               },
             });
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
             const inventories = await tx.ticketInventory.findMany({
               where: {
                 lodgeId: updated.id,
@@ -674,7 +728,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
               },
             });
 
-            const today = new Date();
             const dates: Date[] = [];
             for (let i = 0; i < 365; i++) {
               const d = new Date(today);
