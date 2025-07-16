@@ -292,16 +292,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       req.body.roomTypeImagesCounts || "[]"
     );
 
-    console.log("✅ req.files:", req.files);
-    console.log("✅ req.body:", req.body);
-    console.log("✅ roomTypeImageFiles:", roomTypeImageFiles);
-    console.log("✅ roomTypeImagesCounts:", roomTypeImagesCounts);
-
     if (roomTypeImageFiles.length > 0) {
-      console.log(
-        "✅ Uploading roomTypeImageFiles:",
-        roomTypeImageFiles.length
-      );
 
       if (!roomTypeImagesCounts.length) {
         return res.status(400).json({
@@ -336,7 +327,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
     let uploadedLodgeImages: { imageUrl: string; publicId: string }[] = [];
     if (lodgeImageFiles?.length > 0) {
-      console.log("✅ Uploading lodgeImageFiles:", lodgeImageFiles.length);
 
       uploadedLodgeImages = await Promise.all(
         lodgeImageFiles.map(async (img) => {
