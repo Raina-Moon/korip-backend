@@ -292,6 +292,20 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       req.body.roomTypeImagesCounts || "[]"
     );
 
+    if (roomTypeImageFiles.length > 0) {
+      if (!roomTypeImagesCounts.length) {
+        return res.status(400).json({
+          message: "roomTypeImagesCounts missing despite images present",
+        });
+      }
+
+      if (roomTypeImagesCounts.length !== roomTypes.length) {
+        return res.status(400).json({
+          message: `roomTypeImagesCounts length (${roomTypeImagesCounts.length}) does not match roomTypes length (${roomTypes.length})`,
+        });
+      }
+    }
+
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
     });
