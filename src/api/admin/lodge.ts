@@ -35,9 +35,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   };
   const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
 
-  console.log("📌 [POST /admin/lodge] Parsed ticketTypes:", ticketTypes);
-  console.log("📌 [POST /admin/lodge] ticketTypes length:", ticketTypes.length);
-
   if (
     !name ||
     !address ||
@@ -174,7 +171,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
         const createdTicketTypes = await Promise.all(
           ticketTypes.map(async (ticket: TicketInput) => {
-            console.log("📌 Processing ticket:", ticket);
             const newTicketType = await tx.ticketType.create({
               data: {
                 lodgeId: lodge.id,
@@ -187,8 +183,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
               },
             });
 
-            console.log("📌 Created ticketType:", newTicketType);
-            
             const inventoryResult = await tx.ticketInventory.createMany({
               data: dates.map((date) => ({
                 lodgeId: lodge.id,
@@ -201,11 +195,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
               })),
               skipDuplicates: false,
             });
-
-            console.log(
-              "✅ ticketInventory.createMany result:",
-              inventoryResult
-            );
 
             return newTicketType;
           })
