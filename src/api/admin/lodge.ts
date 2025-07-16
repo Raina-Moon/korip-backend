@@ -349,6 +349,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
     try {
       const result = await prisma.$transaction(async (tx) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         const updated = await tx.hotSpringLodge.update({
           where: { id: Number(id) },
           data: {
@@ -527,8 +530,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 })),
               });
             }
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            
             const dates: Date[] = [];
             for (let d = 0; d < 365; d++) {
               const date = new Date(today);
@@ -548,8 +550,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           }
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
 
         for (let i = 0; i < roomTypes.length; i++) {
           const roomType = roomTypes[i];
@@ -636,8 +636,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
               },
             });
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
             const inventories = await tx.ticketInventory.findMany({
               where: {
                 lodgeId: updated.id,
@@ -698,7 +696,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
               },
             });
 
-            const today = new Date();
             const dates: Date[] = [];
             for (let i = 0; i < 365; i++) {
               const d = new Date(today);
