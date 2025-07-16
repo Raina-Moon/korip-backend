@@ -4,7 +4,7 @@ import multer from "multer";
 import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
 import { v4 as uuidv4 } from "uuid";
 import { deleteFromCloudinary } from "../../utils/deleteFromCloudinary";
-import { startOfDay } from "date-fns";
+import { asyncHandler } from "../../utils/asyncHandler";
 
 interface TicketInput {
   id?: number;
@@ -816,5 +816,34 @@ router.delete("/:id", (async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 }) as RequestHandler);
+
+router.get(
+  "/:id/inventories",
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const lodgeId = Number(id);
+
+    if (isNaN(lodgeId)) {
+      return res.status(400).json({ message: "Invalid lodge ID" });
+    }
+
+    try {
+      const roomInventories = await prisma.roomInventory.findMany({
+        where: { lodgeId },
+        orderBy: { date: "asc" },
+      });
+
+      const ticketInventories = await prisma.ticketInventory.findMany({
+        where: { lodgeId },
+        orderBy: { date: "asc" },
+      });
+
+      res.json({ roomInventories, ticketInventories });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to fetch inventories" });
+    }
+  })
+);
 
 export default router;
