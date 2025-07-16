@@ -288,6 +288,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     };
     const roomTypeImageFiles = filesByField["roomTypeImages"] || [];
     const lodgeImageFiles = filesByField["hotSpringLodgeImages"] || [];
+    const roomTypeImagesCounts = JSON.parse(
+      req.body.roomTypeImagesCounts || "[]"
+    );
 
     const existingLodge = await prisma.hotSpringLodge.findUnique({
       where: { id: Number(id) },
@@ -326,15 +329,24 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       publicId: string;
     }[] = [];
     if (Array.isArray(roomTypes) && roomTypeImageFiles.length > 0) {
+      let currentIndex = 0;
+
       for (let i = 0; i < roomTypes.length; i++) {
-        const files = roomTypeImageFiles.filter(
-          (_, idx) => Math.floor(idx / 100) === i
+        const count = roomTypeImagesCounts[i] || 0;
+        if (count === 0) continue;
+
+        const thisRoomFiles = roomTypeImageFiles.slice(
+          currentIndex,
+          currentIndex + count
         );
+        currentIndex += count;
+
         const uploads = await Promise.all(
-          files.map((file) =>
+          thisRoomFiles.map((file) =>
             uploadToCloudinary(file.buffer, `roomType_${i}_${uuidv4()}`)
           )
         );
+
         uploads.forEach((upload) => {
           roomTypeImageUpload.push({
             idx: i,
@@ -419,7 +431,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           await tx.roomInventory.deleteMany({
             where: { roomTypeId: { in: toDeleteIds } },
           });
-          
+
           await tx.roomType.deleteMany({
             where: { id: { in: toDeleteIds } },
           });
