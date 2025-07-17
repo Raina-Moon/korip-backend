@@ -213,11 +213,13 @@ router.patch(
 
         const previousStatus = reservation.status;
 
+        console.log("✅ Before update", reservation);
         const updated = await tx.ticketReservation.update({
           where: { id: reservationId },
           data: { status: "CANCELLED", cancelReason: cancelReason },
         });
-
+        console.log("✅ After update", updated);
+        
         if (
           previousStatus === "CONFIRMED" &&
           updated.status === "CANCELLED" &&
