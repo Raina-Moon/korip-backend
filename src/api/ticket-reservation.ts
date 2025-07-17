@@ -291,21 +291,29 @@ router.get(
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    const status = req.query.status as string | undefined;
+
     try {
-      const [reservations, totalCount] = await prisma.$transaction([
-        prisma.ticketReservation.findMany({
-          where: {
-            userId: userId ? Number(userId) : undefined,
-            OR: [
-              { status: { not: "CANCELLED" } },
-              {
-                AND: [
-                  { status: "CANCELLED" },
-                  { cancelReason: { not: "AUTO_EXPIRED" } },
-                ],
-              },
+      const whereCondition: any = {
+        userId: Number(userId),
+        OR: [
+          { status: { not: "CANCELLED" } },
+          {
+            AND: [
+              { status: "CANCELLED" },
+              { cancelReason: { not: "AUTO_EXPIRED" } },
             ],
           },
+        ],
+      };
+
+      if (status && status !== "ALL") {
+        whereCondition.status = status;
+      }
+
+      const [reservations, totalCount] = await prisma.$transaction([
+        prisma.ticketReservation.findMany({
+          where: whereCondition,
           include: {
             ticketType: true,
           },
@@ -316,18 +324,7 @@ router.get(
           take: limit,
         }),
         prisma.ticketReservation.count({
-          where: {
-            userId: userId ? Number(userId) : undefined,
-            OR: [
-              { status: { not: "CANCELLED" } },
-              {
-                AND: [
-                  { status: "CANCELLED" },
-                  { cancelReason: { not: "AUTO_EXPIRED" } },
-                ],
-              },
-            ],
-          },
+          where: whereCondition,
         }),
       ]);
 
