@@ -242,7 +242,7 @@ router.patch(
         return updated;
       });
 
-      return res.status(200).json({ reservation: cancelled });
+      return res.status(200).json(cancelled);
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
