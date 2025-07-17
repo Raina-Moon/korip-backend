@@ -166,6 +166,12 @@ router.post(
           },
         });
 
+        console.log("✅ Tickets decremented", {
+          reservationId,
+          decrementAdult: reservation.adults,
+          decrementChild: reservation.children,
+        });
+
         if (!inventory) {
           return res
             .status(404)
