@@ -244,7 +244,11 @@ router.patch(
 
       return res.status(200).json(cancelled);
     } catch (err) {
-      console.error(err);
+      if (err instanceof Error) {
+        console.error("❌ Ticket reservation error:", err.message);
+      } else {
+        console.error("❌ Unknown error:", err);
+      }
       return res.status(500).json({ error: "Internal server error" });
     }
   })
