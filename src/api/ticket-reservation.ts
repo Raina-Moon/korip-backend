@@ -29,6 +29,8 @@ router.post(
       specialRequests,
     } = req.body;
 
+    console.log("✅ Request date:", req.body.date);
+
     const userId = req.user?.userId;
 
     if (
@@ -44,17 +46,32 @@ router.post(
       return res.status(400).json({ error: "All fields are required" });
     }
 
+    const KST = "Asia/Seoul";
+    const zonedDate = toZonedTime(new Date(date), KST);
+    const dayStart = startOfDay(zonedDate);
+    const nextDayStart = addDays(dayStart, 1);
+
     try {
       const reservation = await prisma.$transaction(async (tx) => {
         const inventory = await tx.ticketInventory.findFirst({
           where: {
             ticketTypeId: Number(ticketTypeId),
-            date: startOfDay(new Date(date)),
+            date: {
+              gte: dayStart,
+              lt: nextDayStart,
+            },
           },
         });
 
         if (!inventory) {
-          throw new Error("Inventory not found for selected date");
+          console.error("❌ Inventory not found for:", {
+            ticketTypeId,
+            gte: dayStart.toISOString(),
+            lt: nextDayStart.toISOString(),
+          });
+          return res
+            .status(400)
+            .json({ error: "Inventory not found for selected date" });
         }
 
         if (
@@ -103,7 +120,11 @@ router.post(
 
       return res.status(201).json(reservation);
     } catch (err) {
-      console.error(err);
+      if (err instanceof Error) {
+        console.error("❌ Ticket reservation error:", err.message);
+      } else {
+        console.error("❌ Unknown error:", err);
+      }
       return res.status(500).json({ error: "Internal server error" });
     }
   })
@@ -180,7 +201,11 @@ router.post(
 
       return res.status(200).json(confirmed);
     } catch (err) {
-      console.error(err);
+      if (err instanceof Error) {
+        console.error("❌ Ticket reservation error:", err.message);
+      } else {
+        console.error("❌ Unknown error:", err);
+      }
       return res.status(500).json({ error: "Internal server error" });
     }
   })
@@ -242,9 +267,13 @@ router.patch(
         return updated;
       });
 
-      return res.status(200).json({ reservation: cancelled });
+      return res.status(200).json(cancelled);
     } catch (err) {
-      console.error(err);
+      if (err instanceof Error) {
+        console.error("❌ Ticket reservation error:", err.message);
+      } else {
+        console.error("❌ Unknown error:", err);
+      }
       return res.status(500).json({ error: "Internal server error" });
     }
   })
