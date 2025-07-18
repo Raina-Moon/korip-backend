@@ -14,6 +14,7 @@ import userRouter from "./user";
 import ticketRouter from "./ticket";
 import ticketBookmarkRouter from "./ticketBookmark";
 import ticketReservationRouter from "./ticket-reservation";
+import ticketReviewRouter from "./ticketReview";
 
 const router = express.Router();
 
@@ -32,5 +33,6 @@ router.use("/user", userRouter);
 router.use("/ticket", ticketRouter);
 router.use("/ticket-bookmark", ticketBookmarkRouter);
 router.use("/ticket-reservation", ticketReservationRouter);
+router.use("/ticket-review", ticketReviewRouter);
 
 export default router;
