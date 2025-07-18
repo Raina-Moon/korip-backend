@@ -7,23 +7,18 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 router.get(
-  "/lodge/:lodgeId",
+  "/ticket/:ticketTypeId",
   asyncHandler(async (req, res) => {
-    const { lodgeId } = req.params;
+    const { ticketTypeId } = req.params;
 
     try {
-      const reviews = await prisma.hotSpringLodgeReview.findMany({
-        where: { lodgeId: Number(lodgeId) },
+      const reviews = await prisma.ticketReview.findMany({
+        where: { ticketTypeId: Number(ticketTypeId), isHidden: false },
         include: {
           user: {
             select: {
               id: true,
               nickname: true,
-            },
-          },
-          reservation: {
-            include: {
-              lodge: true,
             },
           },
         },
@@ -51,19 +46,13 @@ router.get(
     }
 
     try {
-      const reviews = await prisma.hotSpringLodgeReview.findMany({
-        where: { userId: userId },
+      const reviews = await prisma.ticketReview.findMany({
+        where: { userId },
         include: {
-          lodge: {
+          ticketType: {
             select: {
               id: true,
               name: true,
-              address: true,
-              images: true,
-            },
-          },
-          reservation: {
-            include: {
               lodge: {
                 select: {
                   id: true,
@@ -74,6 +63,7 @@ router.get(
               },
             },
           },
+          reservation: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -92,7 +82,7 @@ router.post(
   "/",
   authToken,
   asyncHandler(async (req: AuthRequest, res) => {
-    const { rating, comment, lodgeId, reservationId } = req.body;
+    const { rating, comment, ticketTypeId } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -100,33 +90,35 @@ router.post(
     }
 
     try {
-      const validReservation = await prisma.reservation.findFirst({
+      const validReservation = await prisma.ticketReservation.findFirst({
         where: {
-          userId: userId,
-          lodgeId: Number(lodgeId),
+          userId,
+          ticketTypeId: Number(ticketTypeId),
           status: "CONFIRMED",
-          checkOut: {
+          createdAt: {
             lt: new Date(),
           },
         },
       });
+
       if (!validReservation) {
         return res
           .status(403)
-          .json({ message: "You can only review completed stays" });
+          .json({ message: "You can only review completed tickets" });
       }
 
-      const newReview = await prisma.hotSpringLodgeReview.create({
+      const newReview = await prisma.ticketReview.create({
         data: {
           rating,
           comment,
-          lodgeId: Number(lodgeId),
-          userId: userId,
-          reservationId: Number(reservationId),
+          ticketTypeId: Number(ticketTypeId),
+          userId,
+          ticketReservationId: validReservation.id,
         },
         include: {
-          lodge: true,
+          ticketType: true,
           user: true,
+          reservation: true,
         },
       });
 
@@ -151,7 +143,7 @@ router.patch(
     }
 
     try {
-      const existingReview = await prisma.hotSpringLodgeReview.findUnique({
+      const existingReview = await prisma.ticketReview.findUnique({
         where: { id: Number(id) },
       });
 
@@ -165,12 +157,12 @@ router.patch(
           .json({ message: "You can only edit your own reviews" });
       }
 
-      const validReservation = await prisma.reservation.findFirst({
+      const validReservation = await prisma.ticketReservation.findFirst({
         where: {
-          userId: userId,
-          lodgeId: existingReview.lodgeId,
+          userId,
+          ticketTypeId: existingReview.ticketTypeId,
           status: "CONFIRMED",
-          checkOut: {
+          createdAt: {
             lt: new Date(),
           },
         },
@@ -179,17 +171,17 @@ router.patch(
       if (!validReservation) {
         return res
           .status(403)
-          .json({ message: "You can only edit reviews for completed stays" });
+          .json({ message: "You can only edit reviews for completed tickets" });
       }
 
-      const updatedReview = await prisma.hotSpringLodgeReview.update({
+      const updatedReview = await prisma.ticketReview.update({
         where: { id: Number(id) },
         data: {
           rating,
           comment,
         },
         include: {
-          lodge: true,
+          ticketType: true,
           user: true,
         },
       });
@@ -210,7 +202,7 @@ router.delete(
     const userId = req.user?.userId;
 
     try {
-      const existingReview = await prisma.hotSpringLodgeReview.findUnique({
+      const existingReview = await prisma.ticketReview.findUnique({
         where: { id: Number(id) },
       });
 
@@ -224,7 +216,7 @@ router.delete(
           .json({ message: "You can only delete your own reviews" });
       }
 
-      await prisma.hotSpringLodgeReview.delete({
+      await prisma.ticketReview.delete({
         where: { id: Number(id) },
       });
 

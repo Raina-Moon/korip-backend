@@ -18,7 +18,11 @@ router.get(
           include: {
             review: {
               include: {
-                ticketType: true,
+                ticketType: {
+                  include: {
+                    lodge: true,
+                  },
+                },
                 user: true,
               },
             },
@@ -31,33 +35,7 @@ router.get(
         prisma.ticketReportReview.count(),
       ]);
 
-      res.status(200).json({
-        data: reported,
-        total,
-        page,
-        limit,
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  })
-);
-
-router.delete(
-  "/report-only/:reviewId",
-  asyncHandler(async (req, res) => {
-    const { reviewId } = req.params;
-
-    try {
-      await prisma.ticketReportReview.deleteMany({
-        where: { reviewId: Number(reviewId) },
-      });
-
-      res.status(200).json({
-        message: "Ticket review reports deleted successfully",
-        reviewId: Number(reviewId),
-      });
+      res.status(200).json({ data: reported, total, page, limit });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
@@ -82,8 +60,29 @@ router.patch(
       });
 
       res.status(200).json({
-        message: "Ticket review hide status updated",
+        message: "Review hidden successfully",
         updated,
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.delete(
+  "/report-only/:reviewId",
+  asyncHandler(async (req, res) => {
+    const { reviewId } = req.params;
+
+    try {
+      await prisma.ticketReportReview.deleteMany({
+        where: { reviewId: Number(reviewId) },
+      });
+
+      res.status(200).json({
+        message: "Review reports deleted successfully",
+        reviewId: Number(reviewId),
       });
     } catch (err) {
       console.error(err);
@@ -103,7 +102,7 @@ router.delete(
       });
 
       if (!existingReview) {
-        return res.status(404).json({ message: "Ticket review not found" });
+        return res.status(404).json({ message: "Review not found" });
       }
 
       await prisma.ticketReview.delete({
@@ -111,7 +110,7 @@ router.delete(
       });
 
       res.status(200).json({
-        message: "Ticket review deleted successfully",
+        message: "Review deleted successfully",
         reviewId: Number(reviewId),
       });
     } catch (err) {
