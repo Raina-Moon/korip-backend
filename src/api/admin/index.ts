@@ -7,7 +7,7 @@ import reportsRouter from "./reports";
 import reservationRouter from "./reservation";
 import { authToken } from "../../middlewares/authMiddleware";
 import { isAdmin } from "../../middlewares/adminMiddleware";
-import ticketReportsRouter from "./ticketReports";
+import ticketReportsRouter from "./ticket-reports";
 import ticketReservationRouter from "./ticketReservation";
 
 const router = express.Router();
