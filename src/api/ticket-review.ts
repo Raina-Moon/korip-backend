@@ -10,24 +10,33 @@ router.get(
   "/ticket/:ticketTypeId",
   asyncHandler(async (req, res) => {
     const { ticketTypeId } = req.params;
+    const page = Number(req.query.page) || 1;
+    const pageSize = Number(req.query.pageSize) || 5;
 
     try {
-      const reviews = await prisma.ticketReview.findMany({
-        where: { ticketTypeId: Number(ticketTypeId), isHidden: false },
-        include: {
-          user: {
-            select: {
-              id: true,
-              nickname: true,
+      const [reviews, totalCount] = await Promise.all([
+        prisma.ticketReview.findMany({
+          where: { ticketTypeId: Number(ticketTypeId), isHidden: false },
+          include: {
+            user: {
+              select: {
+                id: true,
+                nickname: true,
+              },
             },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+          orderBy: {
+            createdAt: "desc",
+          },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        prisma.ticketReview.count({
+          where: { ticketTypeId: Number(ticketTypeId), isHidden: false },
+        }),
+      ]);
 
-      res.status(200).json(reviews);
+      res.status(200).json({ reviews, totalCount });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
@@ -40,37 +49,46 @@ router.get(
   authToken,
   asyncHandler(async (req: AuthRequest, res) => {
     const userId = req.user?.userId;
+    const page = Number(req.query.page) || 1;
+    const pageSize = Number(req.query.pageSize) || 5;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     try {
-      const reviews = await prisma.ticketReview.findMany({
-        where: { userId },
-        include: {
-          ticketType: {
-            select: {
-              id: true,
-              name: true,
-              lodge: {
-                select: {
-                  id: true,
-                  name: true,
-                  address: true,
-                  images: true,
+      const [reviews, totalCount] = await Promise.all([
+        prisma.ticketReview.findMany({
+          where: { userId },
+          include: {
+            ticketType: {
+              select: {
+                id: true,
+                name: true,
+                lodge: {
+                  select: {
+                    id: true,
+                    name: true,
+                    address: true,
+                    images: true,
+                  },
                 },
               },
             },
+            reservation: true,
           },
-          reservation: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+          orderBy: {
+            createdAt: "desc",
+          },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        prisma.ticketReview.count({
+          where: { userId },
+        }),
+      ]);
 
-      res.status(200).json(reviews);
+      res.status(200).json({ reviews, totalCount });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
