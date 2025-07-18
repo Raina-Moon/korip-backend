@@ -50,13 +50,14 @@ router.get(
         where: { userId: userId },
         include: {
           lodge: {
-            select:{
+            select: {
               id: true,
               name: true,
               address: true,
               images: true,
-            }
+            },
           },
+          reservation: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -75,7 +76,7 @@ router.post(
   "/",
   authToken,
   asyncHandler(async (req: AuthRequest, res) => {
-    const { rating, comment, lodgeId } = req.body;
+    const { rating, comment, lodgeId, reservationId } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -105,6 +106,7 @@ router.post(
           comment,
           lodgeId: Number(lodgeId),
           userId: userId,
+          reservationId: Number(reservationId),
         },
         include: {
           lodge: true,
