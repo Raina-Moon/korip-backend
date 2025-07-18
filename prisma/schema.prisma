@@ -293,23 +293,26 @@ model TicketReservation {
   email           String?
   specialRequests String?
 
-  ticketType TicketType @relation(fields: [ticketTypeId], references: [id])
-  user       User       @relation(fields: [userId], references: [id])
+  ticketType TicketType     @relation(fields: [ticketTypeId], references: [id])
+  user       User           @relation(fields: [userId], references: [id])
+  reviews    TicketReview[]
 }
 
 model TicketReview {
-  id           Int      @id @default(autoincrement())
-  ticketTypeId Int
-  userId       Int
-  rating       Int
-  comment      String?
-  createdAt    DateTime @default(now())
-  isHidden     Boolean  @default(false)
+  id                  Int      @id @default(autoincrement())
+  ticketTypeId        Int
+  ticketReservationId Int?
+  userId              Int
+  rating              Int
+  comment             String?
+  createdAt           DateTime @default(now())
+  isHidden            Boolean  @default(false)
 
   ticketType TicketType @relation(fields: [ticketTypeId], references: [id])
   user       User       @relation(fields: [userId], references: [id])
 
-  reports TicketReportReview[]
+  reports     TicketReportReview[]
+  reservation TicketReservation?   @relation(fields: [ticketReservationId], references: [id])
 }
 
 model TicketBookmark {
