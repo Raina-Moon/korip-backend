@@ -63,6 +63,7 @@ router.get(
               },
             },
           },
+          reservation: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -112,10 +113,12 @@ router.post(
           comment,
           ticketTypeId: Number(ticketTypeId),
           userId,
+          ticketReservationId: validReservation.id,
         },
         include: {
           ticketType: true,
           user: true,
+          reservation: true,
         },
       });
 
@@ -127,7 +130,6 @@ router.post(
   })
 );
 
-// 티켓 리뷰 수정
 router.patch(
   "/:id",
   authToken,
@@ -192,7 +194,6 @@ router.patch(
   })
 );
 
-// 티켓 리뷰 삭제
 router.delete(
   "/:id",
   authToken,
