@@ -10,29 +10,38 @@ router.get(
   "/lodge/:lodgeId",
   asyncHandler(async (req, res) => {
     const { lodgeId } = req.params;
+    const page = Number(req.query.page) || 1;
+    const pageSize = Number(req.query.pageSize) || 5;
 
     try {
-      const reviews = await prisma.hotSpringLodgeReview.findMany({
-        where: { lodgeId: Number(lodgeId) },
-        include: {
-          user: {
-            select: {
-              id: true,
-              nickname: true,
+      const [reviews, totalCount] = await Promise.all([
+        prisma.hotSpringLodgeReview.findMany({
+          where: { lodgeId: Number(lodgeId) },
+          include: {
+            user: {
+              select: {
+                id: true,
+                nickname: true,
+              },
+            },
+            reservation: {
+              include: {
+                lodge: true,
+              },
             },
           },
-          reservation: {
-            include: {
-              lodge: true,
-            },
+          orderBy: {
+            createdAt: "desc",
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        prisma.hotSpringLodgeReview.count({
+          where: { lodgeId: Number(lodgeId) },
+        }),
+      ]);
 
-      res.status(200).json(reviews);
+      res.status(200).json({ reviews, totalCount });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
@@ -45,42 +54,51 @@ router.get(
   authToken,
   asyncHandler(async (req: AuthRequest, res) => {
     const userId = req.user?.userId;
+    const page = Number(req.query.page) || 1;
+    const pageSize = Number(req.query.pageSize) || 5;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     try {
-      const reviews = await prisma.hotSpringLodgeReview.findMany({
-        where: { userId: userId },
-        include: {
-          lodge: {
-            select: {
-              id: true,
-              name: true,
-              address: true,
-              images: true,
+      const [reviews, totalCount] = await Promise.all([
+        prisma.hotSpringLodgeReview.findMany({
+          where: { userId: userId },
+          include: {
+            lodge: {
+              select: {
+                id: true,
+                name: true,
+                address: true,
+                images: true,
+              },
             },
-          },
-          reservation: {
-            include: {
-              lodge: {
-                select: {
-                  id: true,
-                  name: true,
-                  address: true,
-                  images: true,
+            reservation: {
+              include: {
+                lodge: {
+                  select: {
+                    id: true,
+                    name: true,
+                    address: true,
+                    images: true,
+                  },
                 },
               },
             },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+          orderBy: {
+            createdAt: "desc",
+          },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        prisma.hotSpringLodgeReview.count({
+          where: { userId: userId },
+        }),
+      ]);
 
-      res.status(200).json(reviews);
+      res.status(200).json({ reviews, totalCount });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Internal server error" });
