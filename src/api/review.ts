@@ -21,6 +21,11 @@ router.get(
               nickname: true,
             },
           },
+          reservation: {
+            include: {
+              lodge: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
@@ -57,7 +62,18 @@ router.get(
               images: true,
             },
           },
-          reservation: true,
+          reservation: {
+            include: {
+              lodge: {
+                select: {
+                  id: true,
+                  name: true,
+                  address: true,
+                  images: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
