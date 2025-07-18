@@ -90,18 +90,19 @@ model HotSpringLodge {
 }
 
 model HotSpringLodgeReview {
-  id        Int      @id @default(autoincrement())
-  lodgeId   Int
-  userId    Int
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now())
-  isHidden  Boolean  @default(false)
+  id            Int      @id @default(autoincrement())
+  lodgeId       Int
+  userId        Int
+  reservationId Int?
+  rating        Int
+  comment       String?
+  createdAt     DateTime @default(now())
+  isHidden      Boolean  @default(false)
 
-  lodge HotSpringLodge @relation(fields: [lodgeId], references: [id])
-  user  User           @relation(fields: [userId], references: [id])
-
-  reports ReportReview[]
+  lodge       HotSpringLodge @relation(fields: [lodgeId], references: [id])
+  user        User           @relation(fields: [userId], references: [id])
+  reservation Reservation?   @relation(fields: [reservationId], references: [id])
+  reports     ReportReview[]
 }
 
 model HotSpringLodgeImage {
@@ -182,7 +183,8 @@ model Reservation {
   user  User           @relation(fields: [userId], references: [id])
 
   roomTypeId Int
-  roomType   RoomType @relation(fields: [roomTypeId], references: [id])
+  roomType   RoomType               @relation(fields: [roomTypeId], references: [id])
+  reviews    HotSpringLodgeReview[]
 }
 
 model SeasonalPricing {
