@@ -53,6 +53,10 @@ router.patch(
       return res.status(400).json({ message: "isHidden must be a boolean" });
     }
 
+    if(isNaN(Number(reviewId))) {
+      return res.status(400).json({ message: "Invalid review ID" });
+    }
+    
     try {
       const updated = await prisma.ticketReview.update({
         where: { id: Number(reviewId) },
