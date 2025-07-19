@@ -164,6 +164,12 @@ router.patch(
     const { rating, comment } = req.body;
     const userId = req.user?.userId;
 
+    console.log("Patching body:", req.body);
+
+    if (typeof rating !== "number" || typeof comment !== "string") {
+      return res.status(400).json({ message: "Invalid rating or comment" });
+    }
+
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
