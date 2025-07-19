@@ -31,12 +31,13 @@ router.post(
           userId: Number(userId),
         },
       });
+
       return res.status(201).json({
-        message: "Review reported successfully",
+        message: "Ticket review reported successfully",
         report,
       });
     } catch (error) {
-      console.error(error);
+      console.error("Error reporting ticket review:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   })
