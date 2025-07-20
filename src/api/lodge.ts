@@ -179,12 +179,29 @@ router.get(
             })
           );
 
+          const visibleReviews = await prisma.hotSpringLodgeReview.findMany({
+            where: {
+              lodgeId: lodge.id,
+              isHidden: false,
+            },
+            select: { rating: true },
+          });
+
+          const reviewCount = visibleReviews.length;
+          const averageRating =
+            reviewCount > 0
+              ? visibleReviews.reduce((sum, r) => sum + r.rating, 0) /
+                reviewCount
+              : 0;
+
           return {
             ...lodge,
             roomTypes: roomTypesWithPrice,
             region,
             adults: adultsNum,
             children: childrenNum,
+            averageRating: parseFloat(averageRating.toFixed(1)),
+            reviewCount,
           };
         })
       );
