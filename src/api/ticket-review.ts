@@ -24,6 +24,15 @@ router.get(
                 nickname: true,
               },
             },
+            reservation: {
+              include: {
+                ticketType: {
+                  include: {
+                    lodge: true,
+                  },
+                },
+              },
+            },
           },
           orderBy: {
             createdAt: "desc",

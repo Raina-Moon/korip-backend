@@ -167,12 +167,30 @@ router.post(
           .json({ message: "You have already reviewed this ticket" });
       }
 
+      const reservation = await prisma.ticketReservation.findFirst({
+        where: {
+          userId: userId!,
+          ticketTypeId: ticket.id,
+          status: "CONFIRMED",
+          date: {
+            lt: new Date(),
+          },
+        },
+      });
+
+      if (!reservation) {
+        return res.status(403).json({
+          message: "You can only review used & confirmed reservations",
+        });
+      }
+
       const newReview = await prisma.ticketReview.create({
         data: {
           ticketTypeId: ticket.id,
           userId: userId!,
           rating,
           comment,
+          ticketReservationId: reservation.id,
         },
         include: {
           ticketType: true,
@@ -200,6 +218,13 @@ router.get(
         include: {
           user: {
             select: { nickname: true },
+          },
+          reservation: {
+            select: {
+              date: true,
+              adults: true,
+              children: true,
+            },
           },
         },
         orderBy: {
