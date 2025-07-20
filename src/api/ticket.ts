@@ -54,7 +54,11 @@ router.get(
       include: {
         ticketType: {
           include: {
-            lodge: true,
+            lodge: {
+              include: {
+                images: true,
+              },
+            },
           },
         },
       },
@@ -76,6 +80,7 @@ router.get(
           availableAdultTickets: 0,
           availableChildTickets: 0,
           date: searchDate,
+          lodgeImage: tt.lodge.images?.[0]?.imageUrl || null,
         });
       }
       const agg = ticketMap.get(tt.id);
