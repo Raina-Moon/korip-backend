@@ -85,6 +85,27 @@ router.get(
 
     const tickets = Array.from(ticketMap.values());
 
+    for (const ticket of tickets) {
+      const reviews = await prisma.ticketReview.findMany({
+        where: {
+          ticketTypeId: ticket.id,
+          isHidden: false,
+        },
+        select: {
+          rating: true,
+        },
+      });
+
+      const reviewCount = reviews.length;
+      const averageRating =
+        reviewCount > 0
+          ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+          : 0;
+
+      ticket.reviewCount = reviewCount;
+      ticket.averageRating = parseFloat(averageRating.toFixed(1));
+    }
+
     if (sort) {
       switch (sort) {
         case "adult_price_asc":
