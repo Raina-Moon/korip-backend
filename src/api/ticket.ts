@@ -179,11 +179,9 @@ router.post(
       });
 
       if (!reservation) {
-        return res
-          .status(403)
-          .json({
-            message: "You can only review used & confirmed reservations",
-          });
+        return res.status(403).json({
+          message: "You can only review used & confirmed reservations",
+        });
       }
 
       const newReview = await prisma.ticketReview.create({
@@ -220,6 +218,13 @@ router.get(
         include: {
           user: {
             select: { nickname: true },
+          },
+          reservation: {
+            select: {
+              date: true,
+              adults: true,
+              children: true,
+            },
           },
         },
         orderBy: {
