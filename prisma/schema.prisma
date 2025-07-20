@@ -301,7 +301,7 @@ model TicketReservation {
 model TicketReview {
   id                  Int      @id @default(autoincrement())
   ticketTypeId        Int
-  ticketReservationId Int?
+  ticketReservationId Int
   userId              Int
   rating              Int
   comment             String?
@@ -312,7 +312,7 @@ model TicketReview {
   user       User       @relation(fields: [userId], references: [id])
 
   reports     TicketReportReview[]
-  reservation TicketReservation?   @relation(fields: [ticketReservationId], references: [id])
+  reservation TicketReservation    @relation(fields: [ticketReservationId], references: [id])
 }
 
 model TicketBookmark {
