@@ -117,7 +117,7 @@ router.post(
       const token = jwt.sign({ email, locale }, process.env.JWT_SECRET!, {
         expiresIn: "15m",
       });
-      const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/verify-email?token=${token}`;
+      const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/email-verified?token=${token}`;
 
       await sendEmail({ email, type: "verify-email", content: verifyUrl });
 
