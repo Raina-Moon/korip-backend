@@ -39,6 +39,26 @@ router.post(
       }
 
       if (existingUser) {
+        if (existingUser.nickname === "" && !existingUser.password) {
+          const hashedPwd = await bcrypt.hash(password, 10);
+          const updatedUser = await prisma.user.update({
+            where: { email },
+            data: {
+              nickname,
+              password: hashedPwd,
+              isVerified: true,
+            },
+          });
+
+          return res.status(200).json({
+            id: updatedUser.id,
+            nickname: updatedUser.nickname,
+            email: updatedUser.email,
+            createdAt: updatedUser.createdAt,
+            role: updatedUser.role,
+          });
+        }
+
         return res
           .status(409)
           .json({ message: "User with this nickname or email already exists" });
