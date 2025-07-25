@@ -114,6 +114,8 @@ router.post(
         where: { email },
         data: { password: hashedPassword },
       });
+
+      return res.status(200).json({ message: "Password updated successfully" });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ message: "Internal server error" });
