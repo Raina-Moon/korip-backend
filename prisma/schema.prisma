@@ -57,6 +57,7 @@ model PasswordResetCode {
   id        Int      @id @default(autoincrement())
   email     String
   code      String
+  attempts  Int      @default(0)
   createdAt DateTime @default(now())
   expiredAt DateTime
 }
