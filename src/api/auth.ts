@@ -34,7 +34,16 @@ router.post(
         where: { email },
       });
 
-      if (!emailVerification || !emailVerification.verified) {
+      if (!emailVerification) {
+        return res
+          .status(404)
+          .json({
+            message:
+              "Email verification not found. Please request verification again.",
+          });
+      }
+
+      if (!emailVerification.verified) {
         return res.status(403).json({ message: "Email not verified" });
       }
 
