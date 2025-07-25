@@ -10,6 +10,7 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt";
 import { asyncHandler } from "../utils/asyncHandler";
+import { differenceInSeconds } from "date-fns";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -111,6 +112,21 @@ router.post(
       return res
         .status(409)
         .json({ message: "This email is already registered." });
+    }
+
+    const existingVerification = await prisma.emailVerification.findUnique({
+      where: { email },
+    });
+
+    const now = new Date();
+    if (
+      existingVerification &&
+      !existingVerification.verified &&
+      differenceInSeconds(now, existingVerification.createdAt) < 15 * 60
+    ) {
+      return res.status(429).json({
+        message: "You already requested verification. Please check your email.",
+      });
     }
 
     try {
