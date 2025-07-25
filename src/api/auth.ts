@@ -94,6 +94,11 @@ router.post("/request-verify", asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Email is required" });
   }
 
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser) {
+    return res.status(409).json({ message: "This email is already registered." });
+  }
+
   try {
     const token = jwt.sign({ email }, process.env.JWT_SECRET!, {
       expiresIn: "15m",
@@ -102,18 +107,19 @@ router.post("/request-verify", asyncHandler(async (req, res) => {
 
     await sendEmail({ email, type: "verify-email", content: verifyUrl });
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (!existingUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
     await prisma.emailVerification.upsert({
       where: { email },
       update: { verified: false },
       create: {
         email,
         verified: false,
-        user: { connect: { id: existingUser.id } },
+        user: { create: {
+          email,
+          nickname: "",
+          password: null,
+          provider: null,
+          socialId: null,
+        }, },
       },
     });
 
