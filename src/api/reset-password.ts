@@ -59,11 +59,34 @@ router.post(
         },
       });
 
-      if (!latestCodeEntry || latestCodeEntry.code !== code) {
+      if (!latestCodeEntry) {
         return res
           .status(400)
           .json({ message: "Invalid or expired reset code" });
       }
+
+      if (latestCodeEntry.attempts >= 5) {
+        return res
+          .status(429)
+          .json({ message: "Too many attempts. Please request a new code." });
+      }
+
+      if (latestCodeEntry.code !== code) {
+        await prisma.passwordResetCode.update({
+          where: { id: latestCodeEntry.id },
+          data: {
+            attempts: { increment: 1 },
+          },
+        });
+
+        return res
+          .status(400)
+          .json({ message: "Invalid code. Please try again." });
+      }
+
+      await prisma.passwordResetCode.delete({
+        where: { id: latestCodeEntry.id },
+      });
 
       return res.status(200).json({ message: "Reset code is valid" });
     } catch (err) {
