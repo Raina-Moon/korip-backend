@@ -1,6 +1,8 @@
-import "./jobs/cron"
+import "./jobs/cron";
+import "./jobs/cleanUpInactiveUsers";
+import "/jobs/ticket-cron";
 
-import app from './app';
+import app from "./app";
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
