@@ -1,6 +1,6 @@
 import "./jobs/cron";
 import "./jobs/cleanUpInactiveUsers";
-import "/jobs/ticket-cron";
+import "./jobs/ticket-cron";
 
 import app from "./app";
 
