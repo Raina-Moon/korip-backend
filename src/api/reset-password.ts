@@ -72,16 +72,17 @@ router.post(
       }
 
       if (latestCodeEntry.code !== code) {
-        await prisma.passwordResetCode.update({
+        const updated = await prisma.passwordResetCode.update({
           where: { id: latestCodeEntry.id },
           data: {
             attempts: { increment: 1 },
           },
         });
 
-        return res
-          .status(400)
-          .json({ message: "Invalid code. Please try again." });
+        return res.status(400).json({
+          message: "Invalid code. Please try again.",
+          remainingAttempts: 5 - updated.attempts,
+        });
       }
 
       await prisma.passwordResetCode.delete({
