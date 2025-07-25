@@ -8,79 +8,93 @@ import { asyncHandler } from "../utils/asyncHandler";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post("/", asyncHandler(async (req, res) => {
-  const { email } = req.body;
+router.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { email } = req.body;
 
-  try {
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
-    const code = generateResetCode();
+      const code = generateResetCode();
 
-    await prisma.passwordResetCode.create({
-      data: {
-        email,
-        code,
-        expiredAt: new Date(Date.now() + 10 * 60 * 1000),
-      },
-    });
-
-    await sendEmail({ email, type: "reset-password", content: code });
-    return res.status(200).json({ message: "Reset code sent to your email" });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
-
-router.post("/verify", asyncHandler(async (req, res) => {
-  const { email, code } = req.body;
-
-  try {
-    const data = await prisma.passwordResetCode.findFirst({
-      where: {
-        email,
-        code,
-        expiredAt: {
-          gte: new Date(),
+      await prisma.passwordResetCode.create({
+        data: {
+          email,
+          code,
+          expiredAt: new Date(Date.now() + 10 * 60 * 1000),
         },
-      },
-    });
-    if (!data) {
-      return res.status(400).json({ message: "Invalid or expired reset code" });
+      });
+
+      await sendEmail({ email, type: "reset-password", content: code });
+      return res.status(200).json({ message: "Reset code sent to your email" });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Internal server error" });
     }
+  })
+);
 
-    return res.status(200).json({ message: "Reset code is valid" });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
+router.post(
+  "/verify",
+  asyncHandler(async (req, res) => {
+    const { email, code } = req.body;
 
-router.post("/update", asyncHandler(async (req, res) => {
-  const { email, newPassword } = req.body;
+    try {
+      const latestCodeEntry = await prisma.passwordResetCode.findFirst({
+        where: {
+          email,
+          expiredAt: {
+            gte: new Date(),
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
 
-  try {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      if (!latestCodeEntry || latestCodeEntry.code !== code) {
+        return res
+          .status(400)
+          .json({ message: "Invalid or expired reset code" });
+      }
+
+      return res.status(200).json({ message: "Reset code is valid" });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Internal server error" });
     }
+  })
+);
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+router.post(
+  "/update",
+  asyncHandler(async (req, res) => {
+    const { email, newPassword } = req.body;
 
-    await prisma.user.update({
-      where: { email },
-      data: { password: hashedPassword },
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
+    try {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      await prisma.user.update({
+        where: { email },
+        data: { password: hashedPassword },
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
 
 export default router;
