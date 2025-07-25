@@ -34,11 +34,38 @@ router.post(
         where: { email },
       });
 
-      if (!emailVerification || !emailVerification.verified) {
+      if (!emailVerification) {
+        return res.status(404).json({
+          message:
+            "Email verification not found. Please request verification again.",
+        });
+      }
+
+      if (!emailVerification.verified) {
         return res.status(403).json({ message: "Email not verified" });
       }
 
       if (existingUser) {
+        if (existingUser.nickname === "" && !existingUser.password) {
+          const hashedPwd = await bcrypt.hash(password, 10);
+          const updatedUser = await prisma.user.update({
+            where: { email },
+            data: {
+              nickname,
+              password: hashedPwd,
+              isVerified: true,
+            },
+          });
+
+          return res.status(200).json({
+            id: updatedUser.id,
+            nickname: updatedUser.nickname,
+            email: updatedUser.email,
+            createdAt: updatedUser.createdAt,
+            role: updatedUser.role,
+          });
+        }
+
         return res
           .status(409)
           .json({ message: "User with this nickname or email already exists" });
@@ -162,6 +189,46 @@ router.post(
       res.json({ message: "Verification email sent successfully" });
     } catch (err) {
       return res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.post(
+  "/verify-email-token",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ message: "Token is required" });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        email: string;
+        locale: string;
+      };
+
+      const { email } = decoded;
+
+      const verification = await prisma.emailVerification.findUnique({
+        where: { email },
+      });
+
+      if (!verification) {
+        return res.status(404).json({ message: "Verification not found" });
+      }
+
+      if (verification.verified) {
+        return res.status(409).json({ message: "Email already verified" });
+      }
+
+      await prisma.emailVerification.update({
+        where: { email },
+        data: { verified: true },
+      });
+
+      return res.status(200).json({ message: "Email verified successfully" });
+    } catch (err) {
+      return res.status(400).json({ message: "Invalid or expired token" });
     }
   })
 );
