@@ -71,7 +71,7 @@ router.post(
           .json({ message: "Too many attempts. Please request a new code." });
       }
 
-      if (latestCodeEntry.code !== code) {
+      if (String(latestCodeEntry.code) !== String(code)) {
         const updated = await prisma.passwordResetCode.update({
           where: { id: latestCodeEntry.id },
           data: {
@@ -85,7 +85,7 @@ router.post(
         });
       }
 
-      await prisma.passwordResetCode.delete({
+      await prisma.passwordResetCode.deleteMany({
         where: { id: latestCodeEntry.id },
       });
 
