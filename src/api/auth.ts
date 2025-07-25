@@ -35,12 +35,10 @@ router.post(
       });
 
       if (!emailVerification) {
-        return res
-          .status(404)
-          .json({
-            message:
-              "Email verification not found. Please request verification again.",
-          });
+        return res.status(404).json({
+          message:
+            "Email verification not found. Please request verification again.",
+        });
       }
 
       if (!emailVerification.verified) {
@@ -191,6 +189,46 @@ router.post(
       res.json({ message: "Verification email sent successfully" });
     } catch (err) {
       return res.status(500).json({ message: "Internal server error" });
+    }
+  })
+);
+
+router.post(
+  "/verify-email-token",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ message: "Token is required" });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        email: string;
+        locale: string;
+      };
+
+      const { email } = decoded;
+
+      const verification = await prisma.emailVerification.findUnique({
+        where: { email },
+      });
+
+      if (!verification) {
+        return res.status(404).json({ message: "Verification not found" });
+      }
+
+      if (verification.verified) {
+        return res.status(409).json({ message: "Email already verified" });
+      }
+
+      await prisma.emailVerification.update({
+        where: { email },
+        data: { verified: true },
+      });
+
+      return res.status(200).json({ message: "Email verified successfully" });
+    } catch (err) {
+      return res.status(400).json({ message: "Invalid or expired token" });
     }
   })
 );
