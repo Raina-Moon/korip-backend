@@ -108,10 +108,14 @@ router.post(
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res
-        .status(409)
-        .json({ message: "This email is already registered." });
+
+    if (
+      existingUser &&
+      (existingUser.nickname !== "" || existingUser.password !== null)
+    ) {
+      return res.status(409).json({
+        message: "This email is already registered.",
+      });
     }
 
     const existingVerification = await prisma.emailVerification.findUnique({
@@ -133,7 +137,7 @@ router.post(
       const token = jwt.sign({ email, locale }, process.env.JWT_SECRET!, {
         expiresIn: "15m",
       });
-      const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/email-verified?token=${token}`;
+      const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/signup/email-verified?token=${token}`;
 
       await sendEmail({ email, type: "verify-email", content: verifyUrl });
 
