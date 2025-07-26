@@ -129,13 +129,11 @@ router.post(
   "/request-verify",
   asyncHandler(async (req, res) => {
     const { email, locale } = req.body;
-
     if (!email || !locale) {
       return res.status(400).json({ message: "Email and locale are required" });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
-
     if (
       existingUser &&
       (existingUser.nickname !== "" || existingUser.password !== null)
@@ -145,58 +143,77 @@ router.post(
       });
     }
 
-    const existingVerification = await prisma.emailVerification.findUnique({
+    let verification = await prisma.emailVerification.findUnique({
       where: { email },
     });
 
-    const now = new Date();
-    if (
-      existingVerification &&
-      !existingVerification.verified &&
-      differenceInSeconds(now, existingVerification.createdAt) < 15 * 60
-    ) {
-      return res.status(429).json({
-        message: "You already requested verification. Please check your email.",
-      });
-    }
+    const token = jwt.sign({ email, locale }, process.env.JWT_SECRET!, {
+      expiresIn: "15m",
+    });
+    const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/signup/email-verified?token=${token}`;
 
     try {
-      const token = jwt.sign({ email, locale }, process.env.JWT_SECRET!, {
-        expiresIn: "15m",
-      });
-      const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/signup/email-verified?token=${token}`;
-
       await sendEmail({
         email,
         type: "verify-email",
         content: verifyUrl,
         locale,
       });
+    } catch (err) {
+      console.error("이메일 전송 실패:", err);
+      return res.status(500).json({ message: "메일 전송 실패" });
+    }
 
-      await prisma.emailVerification.upsert({
+    if (verification) {
+      await prisma.emailVerification.update({
         where: { email },
-        update: { verified: false },
-        create: {
-          email,
-          verified: false,
-          user: {
-            create: {
-              email,
-              nickname: "",
-              password: null,
-              provider: null,
-              socialId: null,
+        data: { verified: false, createdAt: new Date() },
+      });
+    } else {
+      const user = await prisma.user.findUnique({ where: { email } });
+
+      if (
+        user &&
+        (user.nickname === "" || user.nickname === null) &&
+        (user.password === null || user.password === "")
+      ) {
+        await prisma.emailVerification.create({
+          data: {
+            email,
+            verified: false,
+            createdAt: new Date(),
+            user: { connect: { email } },
+          },
+        });
+      }
+      else if (!user) {
+        await prisma.emailVerification.create({
+          data: {
+            email,
+            verified: false,
+            createdAt: new Date(),
+            user: {
+              create: {
+                email,
+                nickname: "",
+                password: null,
+                provider: null,
+                socialId: null,
+              },
             },
           },
-        },
-      });
-
-      res.json({ message: "Verification email sent successfully" });
-    } catch (err) {
-      return res.status(500).json({ message: "Internal server error" });
+        });
+      } else {
+        return res
+          .status(409)
+          .json({ message: "This email is already registered." });
+      }
     }
+
+    return res.json({ message: "Verification email sent successfully" });
   })
 );
+
 
 router.post(
   "/verify-email-token",
