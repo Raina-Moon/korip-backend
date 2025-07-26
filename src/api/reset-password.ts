@@ -46,8 +46,9 @@ router.post(
   asyncHandler(async (req, res) => {
     const { email, code } = req.body;
 
+    let latestCodeEntry;
     try {
-      const latestCodeEntry = await prisma.passwordResetCode.findFirst({
+      latestCodeEntry = await prisma.passwordResetCode.findFirst({
         where: {
           email,
           expiredAt: {
@@ -58,42 +59,63 @@ router.post(
           createdAt: "desc",
         },
       });
+    } catch (err) {
+      console.error("❌ Failed to fetch reset code entry:", err);
+      return res.status(500).json({ message: "Database error" });
+    }
 
-      if (!latestCodeEntry) {
-        return res
-          .status(400)
-          .json({ message: "Invalid or expired reset code" });
-      }
+    if (!latestCodeEntry) {
+      return res.status(400).json({
+        message: "Invalid or expired reset code",
+        remainingAttempts: 5,
+      });
+    }
 
-      if (latestCodeEntry.attempts >= 5) {
-        return res
-          .status(429)
-          .json({ message: "Too many attempts. Please request a new code." });
-      }
+    if (latestCodeEntry.attempts >= 5) {
+      return res.status(429).json({
+        message: "Too many attempts. Please request a new code.",
+        remainingAttempts: 0,
+      });
+    }
 
-      if (String(latestCodeEntry.code) !== String(code)) {
-        const updated = await prisma.passwordResetCode.update({
+    if (String(latestCodeEntry.code) !== String(code)) {
+      let updated;
+      try {
+        updated = await prisma.passwordResetCode.update({
           where: { id: latestCodeEntry.id },
           data: {
             attempts: { increment: 1 },
           },
         });
-
-        return res.status(400).json({
-          message: "Invalid code. Please try again.",
-          remainingAttempts: 5 - updated.attempts,
-        });
+      } catch (err) {
+        console.error("❌ Failed to update attempts:", err);
+        return res
+          .status(500)
+          .json({ message: "Failed to update code attempt count" });
       }
 
+      if (!updated) {
+        return res
+          .status(500)
+          .json({ message: "Failed to update code attempt count" });
+      }
+
+      return res.status(400).json({
+        message: "Invalid code. Please try again.",
+        remainingAttempts: 5 - updated.attempts,
+      });
+    }
+
+    try {
       await prisma.passwordResetCode.deleteMany({
         where: { id: latestCodeEntry.id },
       });
-
-      return res.status(200).json({ message: "Reset code is valid" });
     } catch (err) {
-      console.error(err);
-      return res.status(500).json({ message: "Internal server error" });
+      console.error("❌ Failed to delete used reset code:", err);
+      return res.status(500).json({ message: "Failed to clear reset code" });
     }
+
+    return res.status(200).json({ message: "Reset code is valid" });
   })
 );
 
