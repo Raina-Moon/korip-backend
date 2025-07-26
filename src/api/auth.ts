@@ -193,6 +193,7 @@ router.post(
 
       res.json({ message: "Verification email sent successfully" });
     } catch (err) {
+        console.error("Email send error:", err);
       return res.status(500).json({ message: "Internal server error" });
     }
   })
