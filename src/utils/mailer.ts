@@ -12,11 +12,51 @@ interface SendEmailOptions {
   email: string;
   type: "reset-password" | "verify-email";
   content: string;
+  locale: string;
 }
 
-export const sendEmail = async ({ email, type, content }: SendEmailOptions) => {
-  let subject = "";
-  let html = "";
+const EMAIL_TEXT = {
+  "reset-password": {
+    en: {
+      subject: "Password Reset Request",
+      title: "🔒 Password Reset Code",
+      desc: "You requested a password reset.<br />Please enter the code below within <b>10 minutes</b>.",
+      ignore: "If you didn’t request this, you can safely ignore this email.",
+    },
+    ko: {
+      subject: "비밀번호 재설정 요청",
+      title: "🔒 비밀번호 재설정 코드",
+      desc: "비밀번호 재설정을 요청하셨습니다.<br /><b>10분 이내</b>에 아래 코드를 입력해 주세요.",
+      ignore:
+        "비밀번호 재설정을 요청하지 않았다면 이 메일은 무시하셔도 됩니다.",
+    },
+  },
+  "verify-email": {
+    en: {
+      subject: "Email Verification",
+      title: "📧 Verify Your Email",
+      desc: "Thanks for signing up! Please confirm your email address by clicking below.",
+      btn: "Verify Email",
+      ignore: "If you didn’t sign up, you can safely ignore this email.",
+    },
+    ko: {
+      subject: "이메일 인증",
+      title: "📧 이메일을 인증해 주세요",
+      desc: "회원가입을 환영합니다! 아래 버튼을 눌러 이메일 인증을 완료해 주세요.",
+      btn: "이메일 인증하기",
+      ignore: "회원가입을 하지 않으셨다면 이 메일을 무시하셔도 됩니다.",
+    },
+  },
+};
+
+export const sendEmail = async ({
+  email,
+  type,
+  content,
+  locale,
+}: SendEmailOptions) => {
+  const lang = ["ko", "en"].includes(locale) ? locale : "en";
+  const t = (EMAIL_TEXT[type] as Record<string, any>)[lang];
 
   const outerStyle = [
     "max-width:480px",
@@ -87,47 +127,47 @@ export const sendEmail = async ({ email, type, content }: SendEmailOptions) => {
 
   const logoImg = `<img src="https://res.cloudinary.com/dqghdryuh/image/upload/v1753522157/koripLogo_go0ssz.png" style="${logoStyle}" alt="Korips Logo" />`;
 
+  let subject = t.subject;
+  let html = "";
+
   if (type === "reset-password") {
-    subject = "Password Reset Request";
     html = `
       <div style="${outerStyle}">
         ${logoImg}
-        <div style="${titleStyle}">🔒 Password Reset Code</div>
+        <div style="${titleStyle}">${t.title}</div>
         <p style="font-size:17px;color:#222;margin-bottom:23px;text-align:center;">
-          You requested a password reset.<br />
-          Please enter the code below within <b>10 minutes</b>.
+          ${t.desc}
         </p>
         <div style="${codeBoxStyle}">
           <span style="${codeStyle}">${content}</span>
         </div>
         <p style="font-size:13px;color:#888;text-align:center;margin-bottom:0;">
-          If you didn’t request this, you can safely ignore this email.
+          ${t.ignore}
         </p>
         <hr style="${hrStyle}">
         <div style="${footerStyle}">&copy; ${new Date().getFullYear()} Korips. All rights reserved.</div>
       </div>
     `;
   } else if (type === "verify-email") {
-    subject = "Email Verification";
     html = `
-  <div style="${outerStyle}">
-    ${logoImg}
-    <div style="${titleStyle}">📧 Verify Your Email</div>
-    <p style="font-size:17px;color:#222;margin-bottom:28px;text-align:center;">
-      Thanks for signing up! Please confirm your email address by clicking below.
-    </p>
-    <div style="text-align:center;margin:28px 0;">
-      <a href="${content}" style="${btnStyle}" target="_blank" rel="noopener">
-        Verify Email
-      </a>
-    </div>
-    <p style="font-size:13px;color:#888;text-align:center;margin:20px 0 0 0;">
-      If you didn’t sign up, you can safely ignore this email.
-    </p>
-    <hr style="${hrStyle}">
-    <div style="${footerStyle}">&copy; ${new Date().getFullYear()} Korips. All rights reserved.</div>
-  </div>
-`;
+      <div style="${outerStyle}">
+        ${logoImg}
+        <div style="${titleStyle}">${t.title}</div>
+        <p style="font-size:17px;color:#222;margin-bottom:28px;text-align:center;">
+          ${t.desc}
+        </p>
+        <div style="text-align:center;margin:28px 0;">
+          <a href="${content}" style="${btnStyle}" target="_blank" rel="noopener">
+            ${t.btn}
+          </a>
+        </div>
+        <p style="font-size:13px;color:#888;text-align:center;margin:20px 0 0 0;">
+          ${t.ignore}
+        </p>
+        <hr style="${hrStyle}">
+        <div style="${footerStyle}">&copy; ${new Date().getFullYear()} Korips. All rights reserved.</div>
+      </div>
+    `;
   }
 
   return mailer.sendMail({

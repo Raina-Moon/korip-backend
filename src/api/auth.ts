@@ -166,7 +166,12 @@ router.post(
       });
       const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/signup/email-verified?token=${token}`;
 
-      await sendEmail({ email, type: "verify-email", content: verifyUrl });
+      await sendEmail({
+        email,
+        type: "verify-email",
+        content: verifyUrl,
+        locale,
+      });
 
       await prisma.emailVerification.upsert({
         where: { email },

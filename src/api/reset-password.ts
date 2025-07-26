@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 router.post(
   "/",
   asyncHandler(async (req, res) => {
-    const { email } = req.body;
+    const { email, locale } = req.body;
 
     try {
       const user = await prisma.user.findUnique({
@@ -32,7 +32,7 @@ router.post(
         },
       });
 
-      await sendEmail({ email, type: "reset-password", content: code });
+      await sendEmail({ email, type: "reset-password", content: code, locale });
       return res.status(200).json({ message: "Reset code sent to your email" });
     } catch (err) {
       console.error(err);
