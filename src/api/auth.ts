@@ -147,64 +147,66 @@ router.post(
       where: { email },
     });
 
-    if (
-      verification &&
-      !verification.verified &&
-      differenceInSeconds(new Date(), verification.createdAt) < 15 * 60
-    ) {
-      return res.status(429).json({
-        message: "You already requested verification. Please check your email.",
-      });
-    }
-
     const token = jwt.sign({ email, locale }, process.env.JWT_SECRET!, {
       expiresIn: "15m",
     });
     const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/signup/email-verified?token=${token}`;
 
-    await sendEmail({
-      email,
-      type: "verify-email",
-      content: verifyUrl,
-      locale,
-    });
+    try {
+      await sendEmail({
+        email,
+        type: "verify-email",
+        content: verifyUrl,
+        locale,
+      });
+    } catch (err) {
+      console.error("이메일 전송 실패:", err);
+      return res.status(500).json({ message: "메일 전송 실패" });
+    }
 
-    for (let i = 0; i < 2; i++) {
-      try {
-        if (verification) {
-          await prisma.emailVerification.update({
-            where: { email },
-            data: { verified: false, createdAt: new Date() },
-          });
-        } else {
-          await prisma.emailVerification.create({
-            data: {
-              email,
-              verified: false,
-              createdAt: new Date(),
-              user: {
-                create: {
-                  email,
-                  nickname: "",
-                  password: null,
-                  provider: null,
-                  socialId: null,
-                },
+    if (verification) {
+      await prisma.emailVerification.update({
+        where: { email },
+        data: { verified: false, createdAt: new Date() },
+      });
+    } else {
+      const user = await prisma.user.findUnique({ where: { email } });
+
+      if (
+        user &&
+        (user.nickname === "" || user.nickname === null) &&
+        (user.password === null || user.password === "")
+      ) {
+        await prisma.emailVerification.create({
+          data: {
+            email,
+            verified: false,
+            createdAt: new Date(),
+            user: { connect: { email } },
+          },
+        });
+      }
+      else if (!user) {
+        await prisma.emailVerification.create({
+          data: {
+            email,
+            verified: false,
+            createdAt: new Date(),
+            user: {
+              create: {
+                email,
+                nickname: "",
+                password: null,
+                provider: null,
+                socialId: null,
               },
             },
-          });
-        }
-        break;
-      } catch (err: any) {
-        if (err.code === "P2025") {
-          verification = null;
-          continue;
-        } else if (err.code === "P2002") {
-          verification = { email, verified: false, createdAt: new Date() } as any;
-          continue;
-        } else {
-          throw err;
-        }
+          },
+        });
+      } else {
+        return res
+          .status(409)
+          .json({ message: "This email is already registered." });
       }
     }
 
