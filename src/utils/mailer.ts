@@ -17,37 +17,117 @@ interface SendEmailOptions {
 export const sendEmail = async ({ email, type, content }: SendEmailOptions) => {
   let subject = "";
   let html = "";
+
+  const outerStyle = [
+    "max-width:480px",
+    "margin:32px auto",
+    "padding:40px 28px 32px 28px",
+    "background:#f7fafc",
+    "border-radius:20px",
+    "border:1.5px solid #e2e8f0",
+    "box-shadow:0 8px 32px 0 rgba(24,41,66,0.11)",
+    "font-family:'Segoe UI',Arial,sans-serif",
+  ].join(";");
+  const logoStyle = [
+    "display:block",
+    "margin:0 auto 20px auto",
+    "width:70px",
+    "height:70px",
+    "border-radius:18px",
+    "box-shadow:0 2px 12px 0 rgba(0,0,0,0.05)",
+    "object-fit:contain",
+  ].join(";");
+  const titleStyle = [
+    "color:#172554",
+    "font-size:25px",
+    "margin-bottom:10px",
+    "text-align:center",
+    "font-weight:700",
+  ].join(";");
+  const hrStyle = [
+    "border:none",
+    "border-top:1.5px solid #e2e8f0",
+    "margin:30px 0 14px 0",
+  ].join(";");
+  const footerStyle = [
+    "font-size:12px",
+    "color:#a0aec0",
+    "text-align:center",
+    "margin-top:14px",
+  ].join(";");
+  const codeBoxStyle = [
+    "background:#fff",
+    "border-radius:13px",
+    "padding:28px 0",
+    "margin:30px 0 28px 0",
+    "border:2px dashed #2563eb",
+    "text-align:center",
+    "box-shadow:0 2px 12px 0 rgba(37,99,235,0.07)",
+  ].join(";");
+  const codeStyle = [
+    "font-size:38px",
+    "font-family:monospace",
+    "font-weight:700",
+    "letter-spacing:10px",
+    "color:#2563eb",
+  ].join(";");
+  const btnStyle = [
+    "display:inline-block",
+    "padding:13px 32px",
+    "background:#2563eb",
+    "color:#fff",
+    "border-radius:7px",
+    "text-align:center",
+    "text-decoration:none",
+    "font-weight:700",
+    "font-size:17px",
+    "box-shadow:0 2px 10px rgba(37,99,235,0.13)",
+    "white-space:nowrap",
+  ].join(";");
+
+  const logoImg = `<img src="https://res.cloudinary.com/dqghdryuh/image/upload/v1753522157/koripLogo_go0ssz.png" style="${logoStyle}" alt="Korips Logo" />`;
+
   if (type === "reset-password") {
     subject = "Password Reset Request";
     html = `
-      <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#f8fafc;border-radius:12px;border:1px solid #eee;box-shadow:0 2px 12px 0 rgba(0,0,0,0.04);">
-        <h2 style="color:#0d172a;font-size:20px;margin-bottom:10px;">🔒 Password Reset Code</h2>
-        <p style="font-size:15px;color:#333;margin-bottom:24px;">
+      <div style="${outerStyle}">
+        ${logoImg}
+        <div style="${titleStyle}">🔒 Password Reset Code</div>
+        <p style="font-size:17px;color:#222;margin-bottom:23px;text-align:center;">
           You requested a password reset.<br />
-          Please use the code below within <b>10 minutes</b>.
+          Please enter the code below within <b>10 minutes</b>.
         </p>
-        <div style="background:#fff;border-radius:8px;padding:24px 0;margin:18px 0;border:1px dashed #94a3b8;text-align:center;">
-          <span style="font-size:30px;font-family:monospace;font-weight:700;letter-spacing:5px;color:#2563eb;">${content}</span>
+        <div style="${codeBoxStyle}">
+          <span style="${codeStyle}">${content}</span>
         </div>
-        <p style="font-size:13px;color:#555;">If you didn’t request this, you can safely ignore this email.</p>
-        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;">
-        <div style="font-size:11px;color:#888;text-align:center;">&copy; ${new Date().getFullYear()} Korips. All rights reserved.</div>
+        <p style="font-size:13px;color:#888;text-align:center;margin-bottom:0;">
+          If you didn’t request this, you can safely ignore this email.
+        </p>
+        <hr style="${hrStyle}">
+        <div style="${footerStyle}">&copy; ${new Date().getFullYear()} Korips. All rights reserved.</div>
       </div>
     `;
   } else if (type === "verify-email") {
     subject = "Email Verification";
     html = `
-      <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#f8fafc;border-radius:12px;border:1px solid #eee;box-shadow:0 2px 12px 0 rgba(0,0,0,0.04);">
-        <h2 style="color:#0d172a;font-size:20px;margin-bottom:10px;">📧 Verify Your Email</h2>
-        <p style="font-size:15px;color:#333;margin-bottom:24px;">
-          Thanks for signing up! Please confirm your email address below.
-        </p>
-        <a href="${content}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:white;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px;margin:24px 0;">Verify Email</a>
-        <p style="font-size:13px;color:#555;">If you didn’t sign up, you can safely ignore this email.</p>
-        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;">
-        <div style="font-size:11px;color:#888;text-align:center;">&copy; ${new Date().getFullYear()} Korips. All rights reserved.</div>
-      </div>
-    `;
+  <div style="${outerStyle}">
+    ${logoImg}
+    <div style="${titleStyle}">📧 Verify Your Email</div>
+    <p style="font-size:17px;color:#222;margin-bottom:28px;text-align:center;">
+      Thanks for signing up! Please confirm your email address by clicking below.
+    </p>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="${content}" style="${btnStyle}" target="_blank" rel="noopener">
+        Verify Email
+      </a>
+    </div>
+    <p style="font-size:13px;color:#888;text-align:center;margin:20px 0 0 0;">
+      If you didn’t sign up, you can safely ignore this email.
+    </p>
+    <hr style="${hrStyle}">
+    <div style="${footerStyle}">&copy; ${new Date().getFullYear()} Korips. All rights reserved.</div>
+  </div>
+`;
   }
 
   return mailer.sendMail({
