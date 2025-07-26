@@ -129,13 +129,11 @@ router.post(
   "/request-verify",
   asyncHandler(async (req, res) => {
     const { email, locale } = req.body;
-
     if (!email || !locale) {
       return res.status(400).json({ message: "Email and locale are required" });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
-
     if (
       existingUser &&
       (existingUser.nickname !== "" || existingUser.password !== null)
@@ -145,59 +143,75 @@ router.post(
       });
     }
 
-    const existingVerification = await prisma.emailVerification.findUnique({
+    let verification = await prisma.emailVerification.findUnique({
       where: { email },
     });
 
-    const now = new Date();
     if (
-      existingVerification &&
-      !existingVerification.verified &&
-      differenceInSeconds(now, existingVerification.createdAt) < 15 * 60
+      verification &&
+      !verification.verified &&
+      differenceInSeconds(new Date(), verification.createdAt) < 15 * 60
     ) {
       return res.status(429).json({
         message: "You already requested verification. Please check your email.",
       });
     }
 
-    try {
-      const token = jwt.sign({ email, locale }, process.env.JWT_SECRET!, {
-        expiresIn: "15m",
-      });
-      const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/signup/email-verified?token=${token}`;
+    const token = jwt.sign({ email, locale }, process.env.JWT_SECRET!, {
+      expiresIn: "15m",
+    });
+    const verifyUrl = `${process.env.FRONTEND_URL}/${locale}/signup/email-verified?token=${token}`;
 
-      await sendEmail({
-        email,
-        type: "verify-email",
-        content: verifyUrl,
-        locale,
-      });
+    await sendEmail({
+      email,
+      type: "verify-email",
+      content: verifyUrl,
+      locale,
+    });
 
-      await prisma.emailVerification.upsert({
-        where: { email },
-        update: { verified: false },
-        create: {
-          email,
-          verified: false,
-          user: {
-            create: {
+    for (let i = 0; i < 2; i++) {
+      try {
+        if (verification) {
+          await prisma.emailVerification.update({
+            where: { email },
+            data: { verified: false, createdAt: new Date() },
+          });
+        } else {
+          await prisma.emailVerification.create({
+            data: {
               email,
-              nickname: "",
-              password: null,
-              provider: null,
-              socialId: null,
+              verified: false,
+              createdAt: new Date(),
+              user: {
+                create: {
+                  email,
+                  nickname: "",
+                  password: null,
+                  provider: null,
+                  socialId: null,
+                },
+              },
             },
-          },
-        },
-      });
-
-      res.json({ message: "Verification email sent successfully" });
-    } catch (err) {
-        console.error("Email send error:", err);
-      return res.status(500).json({ message: "Internal server error" });
+          });
+        }
+        break;
+      } catch (err: any) {
+        if (err.code === "P2025") {
+          verification = null;
+          continue;
+        } else if (err.code === "P2002") {
+          verification = { email, verified: false, createdAt: new Date() } as any;
+          continue;
+        } else {
+          throw err;
+        }
+      }
     }
+
+    return res.json({ message: "Verification email sent successfully" });
   })
 );
+
 
 router.post(
   "/verify-email-token",
