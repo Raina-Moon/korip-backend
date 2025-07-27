@@ -5,6 +5,15 @@ import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
 import { v4 as uuidv4 } from "uuid";
 import { deleteFromCloudinary } from "../../utils/deleteFromCloudinary";
 import { asyncHandler } from "../../utils/asyncHandler";
+import {
+  RoomType,
+  TicketType,
+  HotSpringLodge,
+  HotSpringLodgeImage,
+  TicketInventory,
+  SeasonalPricing,
+  RoomTypeImage
+} from "@prisma/client";
 
 interface TicketInput {
   id?: number;
@@ -15,6 +24,11 @@ interface TicketInput {
   totalAdultTickets: number;
   totalChildTickets: number;
 }
+
+type RoomTypeWithRelations = RoomType & {
+  seasonalPricing: SeasonalPricing[];
+  images: RoomTypeImage[];
+};
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -261,7 +275,7 @@ router.get("/:id", (async (req, res) => {
     res.status(200).json({
       ...lodge,
       images: lodge.images,
-      roomTypes: lodge.roomTypes.map((roomType) => ({
+      roomTypes: lodge.roomTypes.map((roomType: RoomTypeWithRelations) => ({
         ...roomType,
         seasonalPricing: roomType.seasonalPricing,
       })),
@@ -293,7 +307,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     );
 
     if (roomTypeImageFiles.length > 0) {
-
       if (!roomTypeImagesCounts.length) {
         return res.status(400).json({
           message: "roomTypeImagesCounts missing despite images present",
@@ -327,7 +340,6 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
     let uploadedLodgeImages: { imageUrl: string; publicId: string }[] = [];
     if (lodgeImageFiles?.length > 0) {
-
       uploadedLodgeImages = await Promise.all(
         lodgeImageFiles.map(async (img) => {
           const { imageUrl, publicId } = await uploadToCloudinary(
@@ -410,7 +422,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
 
         if (imagesToDelete.length > 0) {
           await Promise.all(
-            imagesToDelete.map((img) => {
+            imagesToDelete.map((img: HotSpringLodgeImage) => {
               if (img.publicId) {
                 return deleteFromCloudinary(img.publicId).catch((err) => {
                   console.error(`Failed to delete image ${img.publicId}:`, err);
@@ -432,11 +444,11 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           where: { lodgeId: Number(id) },
         });
 
-        const existingIds = existingRoomTypes.map((r) => r.id);
+        const existingIds = existingRoomTypes.map((r: RoomType) => r.id);
         const requestIds = roomTypes.filter((r) => r.id).map((r) => r.id);
 
         const toDeleteIds = existingIds.filter(
-          (id) => !requestIds.includes(id)
+          (id: number) => !requestIds.includes(id)
         );
 
         if (toDeleteIds.length > 0) {
@@ -453,7 +465,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           });
         }
 
-        const roomTypeIds = existingRoomTypes.map((rt) => rt.id);
+        const roomTypeIds = existingRoomTypes.map((rt: RoomType) => rt.id);
         await tx.seasonalPricing.deleteMany({
           where: { roomTypeId: { in: roomTypeIds } },
         });
@@ -599,7 +611,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             continue;
           }
 
-          const existing = existingRoomTypes.find((r) => r.id === roomType.id);
+          const existing = existingRoomTypes.find((r: RoomType) => r.id === roomType.id);
           if (!existing) continue;
 
           const totalChanged = roomType.totalRooms !== existing.totalRooms;
@@ -635,14 +647,14 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           where: { lodgeId: Number(id) },
         });
 
-        const existingTicketTypeIds = existingTicketTypes.map((t) => t.id);
+        const existingTicketTypeIds = existingTicketTypes.map((t: TicketType) => t.id);
 
         const requestTicketTypeIds = ticketTypes
           .filter((t) => t.id)
           .map((t) => t.id);
 
         const toDeleteTicketTypeIds = existingTicketTypeIds.filter(
-          (id) => !requestTicketTypeIds.includes(id)
+          (id: number) => !requestTicketTypeIds.includes(id)
         );
 
         if (toDeleteTicketTypeIds.length) {
@@ -677,7 +689,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             });
 
             const existing = existingTicketTypes.find(
-              (t) => t.id === ticket.id
+              (t: TicketType) => t.id === ticket.id
             );
             if (!existing) continue;
 
@@ -794,14 +806,14 @@ router.delete("/:id", (async (req, res) => {
       where: { lodgeId: lodgeId },
     });
 
-    const roomTypeIds = roomTypes.map((rt) => rt.id);
+    const roomTypeIds = roomTypes.map((rt: RoomType) => rt.id);
 
     const lodgeImages = await prisma.hotSpringLodgeImage.findMany({
       where: { lodgeId: lodgeId },
     });
 
     await Promise.all(
-      lodgeImages.map((img) =>
+      lodgeImages.map((img: HotSpringLodgeImage) =>
         img.publicId ? deleteFromCloudinary(img.publicId) : Promise.resolve()
       )
     );
@@ -825,7 +837,7 @@ router.delete("/:id", (async (req, res) => {
     const ticketTypes = await prisma.ticketType.findMany({
       where: { lodgeId },
     });
-    const ticketTypeIds = ticketTypes.map((tt) => tt.id);
+    const ticketTypeIds = ticketTypes.map((tt: TicketType) => tt.id);
 
     await prisma.ticketInventory.deleteMany({
       where: {
