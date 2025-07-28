@@ -9,9 +9,7 @@
     "lint": "eslint --fix src",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
-    "build": "npm run build:types && npm run build:js",
-    "build:types": "tsc --emitDeclarationOnly",
-    "build:js": "babel src --out-dir lib --extensions \".ts,.tsx\" --source-maps inline"
+    "build": "tsc"
   },
   "keywords": [],
   "author": "Capure",
@@ -27,7 +25,7 @@
     "@types/multer": "^1.4.13",
     "@types/nodemailer": "^6.4.17",
     "@types/xml2js": "^0.4.14",
-    "axios": "^1.9.0",
+    "axios": "1.5.1",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.6.1",
     "cookie-parser": "^1.4.7",
@@ -48,17 +46,11 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "@babel/cli": "^7.12.8",
-    "@babel/core": "^7.12.9",
-    "@babel/plugin-proposal-class-properties": "^7.12.1",
-    "@babel/plugin-transform-runtime": "^7.13.10",
-    "@babel/preset-env": "^7.12.7",
-    "@babel/preset-typescript": "^7.12.7",
     "@types/cors": "^2.8.8",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/morgan": "^1.9.2",
-    "@types/node": "^14.14.10",
+    "@types/node": "20",
     "@typescript-eslint/eslint-plugin": "^4.9.0",
     "@typescript-eslint/parser": "^4.9.0",
     "eslint": "^7.14.0",
