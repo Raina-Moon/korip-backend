@@ -15,7 +15,7 @@ app.use(morgan("dev"));
 app.use(helmet());
 app.use(
   cors({
-    origin: "http://13.125.225.227:3000",
+    origin: "http://13.125.143.116:3000",
     credentials: true,
   })
 );
