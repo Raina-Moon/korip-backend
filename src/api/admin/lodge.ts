@@ -12,7 +12,7 @@ import {
   HotSpringLodgeImage,
   TicketInventory,
   SeasonalPricing,
-  RoomTypeImage
+  RoomTypeImage,
 } from "@prisma/client";
 
 interface TicketInput {
@@ -44,10 +44,14 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   const roomTypes = JSON.parse(req.body.roomTypes);
   const latitude = parseFloat(req.body.latitude);
   const longitude = parseFloat(req.body.longitude);
-  const { hotSpringLodgeImages = [], roomTypeImages = [] } = req.files as {
-    [key: string]: Express.Multer.File[];
-  };
   const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
+  let hotSpringLodgeImages: Express.Multer.File[] = [];
+  let roomTypeImages: Express.Multer.File[] = [];
+
+  if (req.files && !Array.isArray(req.files)) {
+    hotSpringLodgeImages = req.files["hotSpringLodgeImages"] || [];
+    roomTypeImages = req.files["roomTypeImages"] || [];
+  }
 
   if (
     !name ||
@@ -56,7 +60,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
     longitude === 0 ||
     !accommodationType ||
     !Array.isArray(roomTypes) ||
-    roomTypes.length === 0 ||
     hotSpringLodgeImages.length === 0
   ) {
     return res.status(400).json({ message: "All fields are required" });
@@ -75,26 +78,37 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
     })
   );
 
-  const uploadRoomTypeImages = await Promise.all(
-    roomTypes.map(async (_, idx) => {
-      const roomFiles = roomTypeImages.filter((file: any) =>
-        file.originalname.startsWith(`roomType_${idx}_`)
-      );
+  interface UploadedRoomTypeImage {
+    idx: number;
+    imageUrl: string;
+    publicId: string;
+  }
 
-      if (roomFiles.length === 0) return [];
-
-      const uploaded = await Promise.all(
-        roomFiles.map(async (file) => {
-          const { imageUrl, publicId } = await uploadToCloudinary(
-            file.buffer,
-            `roomType_${idx}_${uuidv4()}`
+  let uploadRoomTypeImages: UploadedRoomTypeImage[] = [];
+  if (roomTypes.length > 0) {
+    uploadRoomTypeImages = (
+      await Promise.all(
+        roomTypes.map(async (_, idx) => {
+          const roomFiles = roomTypeImages.filter((file: any) =>
+            file.originalname.startsWith(`roomType_${idx}_`)
           );
-          return { idx, imageUrl, publicId };
+
+          if (roomFiles.length === 0) return [];
+
+          const uploaded = await Promise.all(
+            roomFiles.map(async (file) => {
+              const { imageUrl, publicId } = await uploadToCloudinary(
+                file.buffer,
+                `roomType_${idx}_${uuidv4()}`
+              );
+              return { idx, imageUrl, publicId };
+            })
+          );
+          return uploaded;
         })
-      );
-      return uploaded;
-    })
-  );
+      )
+    ).flat();
+  }
 
   try {
     const result = await prisma.$transaction(
@@ -120,54 +134,59 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
           });
         }
 
-        const createRoomTypes = await Promise.all(
-          roomTypes.map(async (roomType: any, index: number) => {
-            const createRoomType = await tx.roomType.create({
-              data: {
-                lodgeId: lodge.id,
-                name: roomType.name,
-                description: roomType.description,
-                basePrice: roomType.basePrice,
-                weekendPrice: roomType.weekendPrice,
-                maxAdults: roomType.maxAdults,
-                maxChildren: roomType.maxChildren,
-                totalRooms: roomType.totalRooms,
-              },
-            });
+        let createRoomTypes: RoomType[] = [];
+        if (roomTypes.length > 0) {
+          createRoomTypes = await Promise.all(
+            roomTypes.map(async (roomType: any, index: number) => {
+              const createRoomType = await tx.roomType.create({
+                data: {
+                  lodgeId: lodge.id,
+                  name: roomType.name,
+                  description: roomType.description,
+                  basePrice: roomType.basePrice,
+                  weekendPrice: roomType.weekendPrice,
+                  maxAdults: roomType.maxAdults,
+                  maxChildren: roomType.maxChildren,
+                  totalRooms: roomType.totalRooms,
+                },
+              });
 
-            if (roomType.seasonalPricing?.length) {
-              await tx.seasonalPricing.createMany({
-                data: roomType.seasonalPricing.map(
-                  (pricing: {
-                    from: string;
-                    to: string;
-                    basePrice: number;
-                    weekendPrice: number;
-                  }) => ({
+              if (roomType.seasonalPricing?.length) {
+                await tx.seasonalPricing.createMany({
+                  data: roomType.seasonalPricing.map(
+                    (pricing: {
+                      from: string;
+                      to: string;
+                      basePrice: number;
+                      weekendPrice: number;
+                    }) => ({
+                      roomTypeId: createRoomType.id,
+                      from: new Date(pricing.from),
+                      to: new Date(pricing.to),
+                      basePrice: pricing.basePrice,
+                      weekendPrice: pricing.weekendPrice,
+                    })
+                  ),
+                });
+              }
+
+              const images = uploadRoomTypeImages.filter(
+                (img) => img.idx === index
+              );
+              if (images.length > 0) {
+                await tx.roomTypeImage.createMany({
+                  data: images.map((img) => ({
                     roomTypeId: createRoomType.id,
-                    from: new Date(pricing.from),
-                    to: new Date(pricing.to),
-                    basePrice: pricing.basePrice,
-                    weekendPrice: pricing.weekendPrice,
-                  })
-                ),
-              });
-            }
+                    imageUrl: img.imageUrl,
+                    publicId: img.publicId,
+                  })),
+                });
+              }
 
-            const images = uploadRoomTypeImages[index];
-            if (images && images.length > 0) {
-              await tx.roomTypeImage.createMany({
-                data: images.map((img) => ({
-                  roomTypeId: createRoomType.id,
-                  imageUrl: img.imageUrl,
-                  publicId: img.publicId,
-                })),
-              });
-            }
-
-            return createRoomType;
-          })
-        );
+              return createRoomType;
+            })
+          );
+        }
 
         const generateDates = (days: number) => {
           const dates: Date[] = [];
@@ -183,16 +202,18 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
         const dates = generateDates(365);
 
-        for (const roomType of createRoomTypes) {
-          await tx.roomInventory.createMany({
-            data: dates.map((date) => ({
-              lodgeId: lodge.id,
-              roomTypeId: roomType.id,
-              date,
-              totalRooms: roomType.totalRooms,
-              availableRooms: roomType.totalRooms,
-            })),
-          });
+        if (createRoomTypes.length > 0) {
+          for (const roomType of createRoomTypes) {
+            await tx.roomInventory.createMany({
+              data: dates.map((date) => ({
+                lodgeId: lodge.id,
+                roomTypeId: roomType.id,
+                date,
+                totalRooms: roomType.totalRooms,
+                availableRooms: roomType.totalRooms,
+              })),
+            });
+          }
         }
 
         const createdTicketTypes = await Promise.all(
@@ -611,7 +632,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             continue;
           }
 
-          const existing = existingRoomTypes.find((r: RoomType) => r.id === roomType.id);
+          const existing = existingRoomTypes.find(
+            (r: RoomType) => r.id === roomType.id
+          );
           if (!existing) continue;
 
           const totalChanged = roomType.totalRooms !== existing.totalRooms;
@@ -647,7 +670,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           where: { lodgeId: Number(id) },
         });
 
-        const existingTicketTypeIds = existingTicketTypes.map((t: TicketType) => t.id);
+        const existingTicketTypeIds = existingTicketTypes.map(
+          (t: TicketType) => t.id
+        );
 
         const requestTicketTypeIds = ticketTypes
           .filter((t) => t.id)
