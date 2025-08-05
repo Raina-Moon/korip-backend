@@ -336,3 +336,19 @@ model TicketReportReview {
   review TicketReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   user   User         @relation(fields: [userId], references: [id])
 }
+
+model News {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Event {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
