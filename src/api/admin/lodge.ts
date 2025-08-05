@@ -367,8 +367,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       !name ||
       !address ||
       !accommodationType ||
-      !Array.isArray(roomTypes) ||
-      roomTypes.length === 0
+      !Array.isArray(roomTypes)
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
