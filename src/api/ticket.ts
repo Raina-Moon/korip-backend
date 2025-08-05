@@ -18,6 +18,10 @@ router.get(
     }
 
     const searchDate = new Date(String(date));
+    if (isNaN(searchDate.getTime())) {
+      return res.status(400).json({ message: "Invalid date format" });
+    }
+
     const startOfDay = new Date(searchDate);
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -26,111 +30,182 @@ router.get(
 
     const adultsNum = parseInt(String(adults)) || 1;
     const childrenNum = parseInt(String(children)) || 0;
+    const sortOption = String(sort || "popularity");
 
-    const inventories = await prisma.ticketInventory.findMany({
-      where: {
-        date: {
-          gte: startOfDay,
-          lt: endOfDay,
-        },
-        availableAdultTickets: {
-          gte: adultsNum,
-        },
-        availableChildTickets: {
-          gte: childrenNum,
-        },
-        ticketType: {
-          lodge: {
-            address:
-              region && region !== "전체" && region !== "All"
-                ? {
-                    contains: String(region),
-                    mode: "insensitive",
-                  }
-                : undefined,
-          },
-        },
-      },
-      include: {
-        ticketType: {
-          include: {
-            lodge: {
-              include: {
-                images: true,
+    try {
+      const lodges = await prisma.hotSpringLodge.findMany({
+        where: {
+          address:
+            region && region !== "전체" && region !== "All"
+              ? {
+                  contains: String(region),
+                  mode: "insensitive",
+                }
+              : undefined,
+          ticketTypes: {
+            some: {
+              inventories: {
+                some: {
+                  date: {
+                    gte: startOfDay,
+                    lt: endOfDay,
+                  },
+                  availableAdultTickets: { gte: adultsNum },
+                  availableChildTickets: { gte: childrenNum },
+                },
               },
             },
           },
         },
-      },
-    });
-
-    const ticketMap = new Map<number, any>();
-
-    inventories.forEach((inv) => {
-      const tt = inv.ticketType;
-      if (!ticketMap.has(tt.id)) {
-        ticketMap.set(tt.id, {
-          id: tt.id,
-          name: tt.name,
-          description: tt.description,
-          region: tt.lodge.address,
-          lodgeId: tt.lodgeId,
-          adultPrice: tt.adultPrice,
-          childPrice: tt.childPrice,
-          availableAdultTickets: 0,
-          availableChildTickets: 0,
-          date: searchDate,
-          lodgeImage: tt.lodge.images?.[0]?.imageUrl || null,
-        });
-      }
-      const agg = ticketMap.get(tt.id);
-      agg.availableAdultTickets += inv.availableAdultTickets;
-      agg.availableChildTickets += inv.availableChildTickets;
-    });
-
-    const tickets = Array.from(ticketMap.values());
-
-    for (const ticket of tickets) {
-      const reviews = await prisma.ticketReview.findMany({
-        where: {
-          ticketTypeId: ticket.id,
-          isHidden: false,
-        },
-        select: {
-          rating: true,
+        include: {
+          images: {
+            select: { imageUrl: true },
+          },
+          ticketTypes: {
+            where: {
+              inventories: {
+                some: {
+                  date: {
+                    gte: startOfDay,
+                    lt: endOfDay,
+                  },
+                  availableAdultTickets: { gte: adultsNum },
+                  availableChildTickets: { gte: childrenNum },
+                },
+              },
+            },
+            include: {
+              inventories: {
+                where: {
+                  date: {
+                    gte: startOfDay,
+                    lt: endOfDay,
+                  },
+                  availableAdultTickets: { gte: adultsNum },
+                  availableChildTickets: { gte: childrenNum },
+                },
+                select: {
+                  availableAdultTickets: true,
+                  availableChildTickets: true,
+                },
+              },
+              reviews: {
+                where: { isHidden: false },
+                select: { rating: true },
+              },
+            },
+          },
+          _count: {
+            select: {
+              reservations: true,
+            },
+          },
         },
       });
 
-      const reviewCount = reviews.length;
-      const averageRating =
-        reviewCount > 0
-          ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
-          : 0;
+      const lodgesWithTickets = lodges
+        .map((lodge) => {
+          const ticketTypesWithDetails = lodge.ticketTypes
+            .map((ticket) => {
+              const reviewCount = ticket.reviews.length;
+              const averageRating =
+                reviewCount > 0
+                  ? ticket.reviews.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / reviewCount
+                  : 0;
 
-      ticket.reviewCount = reviewCount;
-      ticket.averageRating = parseFloat(averageRating.toFixed(1));
-    }
+              return {
+                id: ticket.id,
+                name: ticket.name,
+                description: ticket.description || "",
+                adultPrice: ticket.adultPrice,
+                childPrice: ticket.childPrice,
+                availableAdultTickets: ticket.inventories.reduce(
+                  (sum: number, inv: { availableAdultTickets: number }) => sum + inv.availableAdultTickets,
+                  0
+                ),
+                availableChildTickets: ticket.inventories.reduce(
+                  (sum: number, inv: { availableChildTickets: number }) => sum + inv.availableChildTickets,
+                  0
+                ),
+                date: searchDate.toISOString(),
+                reviewCount,
+                averageRating: parseFloat(averageRating.toFixed(1)),
+              };
+            })
+            .filter(
+              (ticket) =>
+                ticket.availableAdultTickets >= adultsNum &&
+                ticket.availableChildTickets >= childrenNum
+            );
 
-    if (sort) {
-      switch (sort) {
+          if (ticketTypesWithDetails.length === 0) {
+            return null;
+          }
+
+          const allReviews = lodge.ticketTypes.flatMap((ticket) => ticket.reviews);
+          const reviewCount = allReviews.length;
+          const averageRating =
+            reviewCount > 0
+              ? allReviews.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / reviewCount
+              : 0;
+
+          return {
+            id: lodge.id,
+            name: lodge.name,
+            address: lodge.address,
+            images: lodge.images,
+            ticketTypes: ticketTypesWithDetails,
+            reviewCount,
+            averageRating: parseFloat(averageRating.toFixed(1)),
+            reservationCount: lodge._count.reservations, // Corrected to match schema
+          };
+        })
+        .filter((lodge): lodge is NonNullable<typeof lodge> => lodge !== null);
+
+      switch (sortOption) {
+        case "popularity":
+          lodgesWithTickets.sort((a, b) => b.reservationCount - a.reservationCount);
+          break;
+        case "reviews":
+          lodgesWithTickets.sort((a, b) => b.reviewCount - a.reviewCount);
+          break;
         case "adult_price_asc":
-          tickets.sort((a, b) => a.adultPrice - b.adultPrice);
+          lodgesWithTickets.sort((a, b) => {
+            const priceA = a.ticketTypes.length > 0 ? Math.min(...a.ticketTypes.map((t) => t.adultPrice)) : Infinity;
+            const priceB = b.ticketTypes.length > 0 ? Math.min(...b.ticketTypes.map((t) => t.adultPrice)) : Infinity;
+            return priceA - priceB;
+          });
           break;
         case "adult_price_desc":
-          tickets.sort((a, b) => b.adultPrice - a.adultPrice);
+          lodgesWithTickets.sort((a, b) => {
+            const priceA = a.ticketTypes.length > 0 ? Math.max(...a.ticketTypes.map((t) => t.adultPrice)) : 0;
+            const priceB = b.ticketTypes.length > 0 ? Math.max(...b.ticketTypes.map((t) => t.adultPrice)) : 0;
+            return priceB - priceA;
+          });
           break;
         case "child_price_asc":
-          tickets.sort((a, b) => a.childPrice - b.childPrice);
+          lodgesWithTickets.sort((a, b) => {
+            const priceA = a.ticketTypes.length > 0 ? Math.min(...a.ticketTypes.map((t) => t.childPrice)) : Infinity;
+            const priceB = b.ticketTypes.length > 0 ? Math.min(...b.ticketTypes.map((t) => t.childPrice)) : Infinity;
+            return priceA - priceB;
+          });
           break;
         case "child_price_desc":
-          tickets.sort((a, b) => b.childPrice - a.childPrice);
+          lodgesWithTickets.sort((a, b) => {
+            const priceA = a.ticketTypes.length > 0 ? Math.max(...a.ticketTypes.map((t) => t.childPrice)) : 0;
+            const priceB = b.ticketTypes.length > 0 ? Math.max(...b.ticketTypes.map((t) => t.childPrice)) : 0;
+            return priceB - priceA;
+          });
           break;
         default:
           break;
       }
-    }
 
-    res.status(200).json(tickets);
+      res.status(200).json(lodgesWithTickets);
+    } catch (err) {
+      console.error("Error in ticket search:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   })
 );
 
