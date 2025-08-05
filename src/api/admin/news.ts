@@ -17,10 +17,19 @@ router.post(
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const newsList = await prisma.news.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    res.json(newsList);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const [data, total] = await prisma.$transaction([
+      prisma.news.findMany({
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.news.count(),
+    ]);
+
+    res.json({ data, total, page, limit });
   })
 );
 
