@@ -90,18 +90,12 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
   let uploadRoomTypeImages: UploadedRoomTypeImage[] = [];
   if (roomTypeImages.length > 0) {
-    console.log(
-      "Processing roomTypeImages:",
-      roomTypeImages.map((f) => f.originalname)
-    ); // 디버깅용
 
     for (let roomIdx = 0; roomIdx < roomTypes.length; roomIdx++) {
       const roomFiles = roomTypeImages.filter((file: Express.Multer.File) => {
         const match = file.originalname.match(/roomType_(\d+)_/);
         return match && Number(match[1]) === roomIdx;
       });
-
-      console.log(`Room ${roomIdx} files:`, roomFiles.length); // 디버깅용
 
       if (roomFiles.length > 0) {
         const uploaded = await Promise.all(
@@ -117,8 +111,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
       }
     }
   }
-
-  console.log("Final uploadRoomTypeImages:", uploadRoomTypeImages.length); // 디버깅용
 
   try {
     const result = await prisma.$transaction(
@@ -193,8 +185,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
                 (img) => img.idx === index
               );
 
-              console.log(`Creating images for room ${index}:`, images.length); // 디버깅용
-
               if (images.length > 0) {
                 const createdImages = await tx.roomTypeImage.createMany({
                   data: images.map((img) => ({
@@ -243,11 +233,18 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
 
         const createdTicketTypes = await Promise.all(
           ticketTypes.map(async (ticket: TicketInput) => {
+            const nameEn = await translateText(ticket.name, "EN");
+            const descriptionEn = ticket.description
+              ? await translateText(ticket.description, "EN")
+              : null;
+              
             const newTicketType = await tx.ticketType.create({
               data: {
                 lodgeId: lodge.id,
                 name: ticket.name,
+                nameEn,
                 description: ticket.description,
+                descriptionEn,
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
                 totalAdultTickets: ticket.totalAdultTickets,
