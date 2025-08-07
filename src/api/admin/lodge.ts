@@ -152,11 +152,18 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
         if (roomTypes.length > 0) {
           createRoomTypes = await Promise.all(
             roomTypes.map(async (roomType: any, index: number) => {
+              const nameEn = await translateText(roomType.name, "EN");
+              const descriptionEn = roomType.description
+                ? await translateText(roomType.description, "EN")
+                : null;
+
               const createRoomType = await tx.roomType.create({
                 data: {
                   lodgeId: lodge.id,
                   name: roomType.name,
+                  nameEn,
                   description: roomType.description,
+                  descriptionEn,
                   basePrice: roomType.basePrice,
                   weekendPrice: roomType.weekendPrice,
                   maxAdults: roomType.maxAdults,
@@ -543,11 +550,18 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             const roomType = roomTypes[i];
 
             if (roomType.id) {
+              const nameEn = await translateText(roomType.name, "EN");
+              const descriptionEn = roomType.description
+                ? await translateText(roomType.description, "EN")
+                : null;
+
               await tx.roomType.update({
                 where: { id: roomType.id },
                 data: {
                   name: roomType.name,
+                  nameEn,
                   description: roomType.description,
+                  descriptionEn,
                   basePrice: roomType.basePrice,
                   weekendPrice: roomType.weekendPrice,
                   maxAdults: roomType.maxAdults,
