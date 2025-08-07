@@ -255,7 +255,9 @@ model TicketType {
   id                Int      @id @default(autoincrement())
   lodgeId           Int
   name              String
+  nameEn            String?
   description       String?
+  descriptionEn     String?
   adultPrice        Int
   childPrice        Int
   totalAdultTickets Int
