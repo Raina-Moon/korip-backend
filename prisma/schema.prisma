@@ -221,8 +221,10 @@ model RoomInventory {
 model RoomType {
   id           Int     @id @default(autoincrement())
   lodgeId      Int
-  name         String // e.g., "Standard", "Deluxe", "Suite"
+  name         String
+  nameEn       String?
   description  String?
+  descriptionEn String?
   basePrice    Int
   weekendPrice Int?
   maxAdults    Int
