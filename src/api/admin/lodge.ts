@@ -237,7 +237,7 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
             const descriptionEn = ticket.description
               ? await translateText(ticket.description, "EN")
               : null;
-              
+
             const newTicketType = await tx.ticketType.create({
               data: {
                 lodgeId: lodge.id,
@@ -609,7 +609,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
                 data: {
                   lodgeId: updated.id,
                   name: roomType.name,
+                  nameEn,
                   description: roomType.description,
+                  descriptionEn,
                   basePrice: roomType.basePrice,
                   weekendPrice: roomType.weekendPrice,
                   maxAdults: roomType.maxAdults,
@@ -725,12 +727,19 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         }
 
         for (const ticket of ticketTypes) {
+          const nameEn = await translateText(ticket.name, "EN");
+          const descriptionEn = ticket.description
+            ? await translateText(ticket.description, "EN")
+            : null;
+
           if (ticket.id) {
             await tx.ticketType.update({
               where: { id: ticket.id },
               data: {
                 name: ticket.name,
+                nameEn,
                 description: ticket.description,
+                descriptionEn,
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
                 totalAdultTickets: ticket.totalAdultTickets,
@@ -788,7 +797,9 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
               data: {
                 lodgeId: Number(id),
                 name: ticket.name,
+                nameEn,
                 description: ticket.description,
+                descriptionEn,
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
                 totalAdultTickets: ticket.totalAdultTickets,
