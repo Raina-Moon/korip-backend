@@ -65,10 +65,12 @@ model PasswordResetCode {
 model HotSpringLodge {
   id                Int     @id @default(autoincrement())
   name              String
+  nameEn            String?
   address           String
   latitude          Float
   longitude         Float
   description       String?
+  descriptionEn     String?
   accommodationType String
 
   reviews HotSpringLodgeReview[]
@@ -91,19 +93,19 @@ model HotSpringLodge {
 }
 
 model HotSpringLodgeReview {
-  id            Int      @id @default(autoincrement())
+  id            Int  @id @default(autoincrement())
   lodgeId       Int
   userId        Int
   reservationId Int?
   rating        Int
 
-  comment       String?
-  originalLang        String? 
-  enTranslated        String? 
-  koTranslated        String? 
+  comment      String?
+  originalLang String?
+  enTranslated String?
+  koTranslated String?
 
-  createdAt     DateTime @default(now())
-  isHidden      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  isHidden  Boolean  @default(false)
 
   lodge       HotSpringLodge @relation(fields: [lodgeId], references: [id])
   user        User           @relation(fields: [userId], references: [id])
@@ -305,19 +307,19 @@ model TicketReservation {
 }
 
 model TicketReview {
-  id                  Int      @id @default(autoincrement())
+  id                  Int @id @default(autoincrement())
   ticketTypeId        Int
   ticketReservationId Int
   userId              Int
   rating              Int
 
-  comment             String?
-  originalLang        String?   
-  enTranslated        String?   
-  koTranslated        String? 
+  comment      String?
+  originalLang String?
+  enTranslated String?
+  koTranslated String?
 
-  createdAt           DateTime @default(now())
-  isHidden            Boolean  @default(false)
+  createdAt DateTime @default(now())
+  isHidden  Boolean  @default(false)
 
   ticketType TicketType @relation(fields: [ticketTypeId], references: [id])
   user       User       @relation(fields: [userId], references: [id])
