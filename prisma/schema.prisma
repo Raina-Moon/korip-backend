@@ -96,7 +96,12 @@ model HotSpringLodgeReview {
   userId        Int
   reservationId Int?
   rating        Int
+
   comment       String?
+  originalLang        String? 
+  enTranslated        String? 
+  koTranslated        String? 
+
   createdAt     DateTime @default(now())
   isHidden      Boolean  @default(false)
 
@@ -305,7 +310,12 @@ model TicketReview {
   ticketReservationId Int
   userId              Int
   rating              Int
+
   comment             String?
+  originalLang        String?   
+  enTranslated        String?   
+  koTranslated        String? 
+
   createdAt           DateTime @default(now())
   isHidden            Boolean  @default(false)
 
