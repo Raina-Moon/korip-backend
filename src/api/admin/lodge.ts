@@ -8,12 +8,11 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import {
   RoomType,
   TicketType,
-  HotSpringLodge,
   HotSpringLodgeImage,
-  TicketInventory,
   SeasonalPricing,
   RoomTypeImage,
 } from "@prisma/client";
+import { translateText } from "../../utils/deepl";
 
 interface TicketInput {
   id?: number;
@@ -44,6 +43,11 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
   const roomTypes = JSON.parse(req.body.roomTypes);
   const latitude = parseFloat(req.body.latitude);
   const longitude = parseFloat(req.body.longitude);
+  const nameEn = await translateText(name, "EN");
+  const descriptionEn = description
+    ? await translateText(description, "EN")
+    : null;
+
   const ticketTypes: TicketInput[] = JSON.parse(req.body.ticketTypes || "[]");
   let hotSpringLodgeImages: Express.Multer.File[] = [];
   let roomTypeImages: Express.Multer.File[] = [];
@@ -124,10 +128,12 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
         const lodge = await tx.hotSpringLodge.create({
           data: {
             name,
+            nameEn,
             address,
             latitude,
             longitude,
             description,
+            descriptionEn,
             accommodationType,
           },
         });
@@ -146,11 +152,18 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
         if (roomTypes.length > 0) {
           createRoomTypes = await Promise.all(
             roomTypes.map(async (roomType: any, index: number) => {
+              const nameEn = await translateText(roomType.name, "EN");
+              const descriptionEn = roomType.description
+                ? await translateText(roomType.description, "EN")
+                : null;
+
               const createRoomType = await tx.roomType.create({
                 data: {
                   lodgeId: lodge.id,
                   name: roomType.name,
+                  nameEn,
                   description: roomType.description,
+                  descriptionEn,
                   basePrice: roomType.basePrice,
                   weekendPrice: roomType.weekendPrice,
                   maxAdults: roomType.maxAdults,
@@ -328,12 +341,17 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     const { name, address, description, accommodationType } = req.body;
 
     const keepImgIds = JSON.parse(req.body.keepImgIds || "[]");
-    
+
     const roomTypes = req.body.roomTypes ? JSON.parse(req.body.roomTypes) : [];
-    
+
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
     const keepRoomTypeImgIds = JSON.parse(req.body.keepRoomTypeImgIds || "[]");
+    const nameEn = await translateText(name, "EN");
+    const descriptionEn = description
+      ? await translateText(description, "EN")
+      : null;
+
     const filesByField = req.files as {
       [fieldname: string]: Express.Multer.File[];
     };
@@ -366,11 +384,15 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
     }
 
     if (!name || !address || !accommodationType) {
-      return res.status(400).json({ message: "Name, address, and accommodationType are required" });
+      return res
+        .status(400)
+        .json({ message: "Name, address, and accommodationType are required" });
     }
 
     if (req.body.roomTypes && !Array.isArray(roomTypes)) {
-      return res.status(400).json({ message: "roomTypes must be an array if provided" });
+      return res
+        .status(400)
+        .json({ message: "roomTypes must be an array if provided" });
     }
 
     let uploadedLodgeImages: { imageUrl: string; publicId: string }[] = [];
@@ -391,7 +413,7 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
       imageUrl: string;
       publicId: string;
     }[] = [];
-    
+
     if (roomTypes.length > 0 && roomTypeImageFiles.length > 0) {
       let currentIndex = 0;
 
@@ -432,10 +454,12 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
           where: { id: Number(id) },
           data: {
             name,
+            nameEn,
             address,
             latitude,
             longitude,
             description,
+            descriptionEn,
             accommodationType,
           },
         });
@@ -477,14 +501,16 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
         }
 
         let existingRoomTypes: RoomType[] = [];
-        
+
         if (roomTypes.length > 0) {
           existingRoomTypes = await tx.roomType.findMany({
             where: { lodgeId: Number(id) },
           });
 
           const existingIds = existingRoomTypes.map((r: RoomType) => r.id);
-          const requestIds = roomTypes.filter((r:any) => r.id).map((r:any) => r.id);
+          const requestIds = roomTypes
+            .filter((r: any) => r.id)
+            .map((r: any) => r.id);
 
           const toDeleteIds = existingIds.filter(
             (id: number) => !requestIds.includes(id)
@@ -524,11 +550,18 @@ router.patch("/:id", uploadMiddleware, (async (req, res) => {
             const roomType = roomTypes[i];
 
             if (roomType.id) {
+              const nameEn = await translateText(roomType.name, "EN");
+              const descriptionEn = roomType.description
+                ? await translateText(roomType.description, "EN")
+                : null;
+
               await tx.roomType.update({
                 where: { id: roomType.id },
                 data: {
                   name: roomType.name,
+                  nameEn,
                   description: roomType.description,
+                  descriptionEn,
                   basePrice: roomType.basePrice,
                   weekendPrice: roomType.weekendPrice,
                   maxAdults: roomType.maxAdults,
