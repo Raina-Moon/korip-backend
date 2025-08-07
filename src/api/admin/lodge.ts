@@ -57,8 +57,6 @@ router.post("/", uploadMiddleware, (async (req: Request, res: Response) => {
     roomTypeImages = req.files["roomTypeImages"] || [];
   }
 
-  console.log("Received roomTypeImages:", roomTypeImages.length); // 디버깅용
-
   if (
     !name ||
     !address ||
