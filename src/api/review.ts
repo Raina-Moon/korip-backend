@@ -2,6 +2,7 @@ import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
+import { detectLanguage, translateText } from "../utils/deepl";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -134,10 +135,26 @@ router.post(
           .json({ message: "You can only review completed stays" });
       }
 
+      const originalLang = comment ? await detectLanguage(comment) : null;
+
+      let enTranslated: string | null = null;
+      let koTranslated: string | null = null;
+
+      if (comment) {
+        if (originalLang === "KO") {
+          enTranslated = await translateText(comment, "EN");
+        } else {
+          koTranslated = await translateText(comment, "KO");
+        }
+      }
+
       const newReview = await prisma.hotSpringLodgeReview.create({
         data: {
           rating,
           comment,
+          originalLang,
+          enTranslated,
+          koTranslated,
           lodgeId: Number(lodgeId),
           userId: userId,
           reservationId: Number(reservationId),
@@ -200,11 +217,27 @@ router.patch(
           .json({ message: "You can only edit reviews for completed stays" });
       }
 
+      const originalLang = comment ? await detectLanguage(comment) : null;
+
+      let enTranslated: string | null = null;
+      let koTranslated: string | null = null;
+
+      if (comment) {
+        if (originalLang === "KO") {
+          enTranslated = await translateText(comment, "EN");
+        } else {
+          koTranslated = await translateText(comment, "KO");
+        }
+      }
+
       const updatedReview = await prisma.hotSpringLodgeReview.update({
         where: { id: Number(id) },
         data: {
           rating,
           comment,
+          originalLang,
+          enTranslated,
+          koTranslated,
         },
         include: {
           lodge: true,
