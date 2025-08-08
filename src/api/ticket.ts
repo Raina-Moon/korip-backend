@@ -116,7 +116,9 @@ router.get(
               return {
                 id: ticket.id,
                 name: ticket.name,
+                nameEn: ticket.nameEn || "",
                 description: ticket.description || "",
+                descriptionEn: ticket.descriptionEn || "",
                 adultPrice: ticket.adultPrice,
                 childPrice: ticket.childPrice,
                 availableAdultTickets: ticket.inventories.reduce(
