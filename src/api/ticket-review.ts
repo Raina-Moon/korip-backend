@@ -75,10 +75,12 @@ router.get(
               select: {
                 id: true,
                 name: true,
+                nameEn: true,
                 lodge: {
                   select: {
                     id: true,
                     name: true,
+                    nameEn: true,
                     address: true,
                     images: true,
                   },
