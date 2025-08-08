@@ -154,6 +154,7 @@ router.get(
           return {
             id: lodge.id,
             name: lodge.name,
+            nameEn: lodge.nameEn || "",
             address: lodge.address,
             images: lodge.images,
             ticketTypes: ticketTypesWithDetails,
