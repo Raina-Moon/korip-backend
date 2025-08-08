@@ -1,6 +1,8 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { translateText } from "../../utils/deepl";
+import { translateHtmlContent } from "../../utils/translateHtml";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,7 +11,12 @@ router.post(
   "/",
   asyncHandler(async (req, res) => {
     const { title, content } = req.body;
-    const news = await prisma.news.create({ data: { title, content } });
+
+    const titleEn = await translateText(title, "EN");
+    const contentEn = await translateHtmlContent(content, "EN");
+    const news = await prisma.news.create({
+      data: { title, content, titleEn, contentEn },
+    });
     res.status(201).json(news);
   })
 );
