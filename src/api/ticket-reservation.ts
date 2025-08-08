@@ -315,7 +315,13 @@ router.get(
         prisma.ticketReservation.findMany({
           where: whereCondition,
           include: {
-            ticketType: true,
+            ticketType: {
+              select: {
+                id: true,
+                name: true,
+                nameEn: true,
+              },
+            },
           },
           orderBy: {
             createdAt: "desc",
