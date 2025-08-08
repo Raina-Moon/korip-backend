@@ -56,9 +56,20 @@ router.patch(
   "/:id",
   asyncHandler(async (req, res) => {
     const { title, content } = req.body;
+
+    const titleEn = title ? await translateText(title, "EN") : undefined;
+    const contentEn = content
+      ? await translateHtmlContent(content, "EN")
+      : undefined;
+
     const updated = await prisma.event.update({
       where: { id: Number(req.params.id) },
-      data: { title, content },
+      data: {
+        ...(title && { title }),
+        ...(content && { content }),
+        ...(titleEn && { titleEn }),
+        ...(contentEn && { contentEn }),
+      },
     });
     res.json(updated);
   })
