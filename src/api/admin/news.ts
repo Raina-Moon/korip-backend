@@ -1,6 +1,8 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { translateText } from "../../utils/deepl";
+import { translateHtmlContent } from "../../utils/translateHtml";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,7 +11,12 @@ router.post(
   "/",
   asyncHandler(async (req, res) => {
     const { title, content } = req.body;
-    const news = await prisma.news.create({ data: { title, content } });
+
+    const titleEn = await translateText(title, "EN");
+    const contentEn = await translateHtmlContent(content, "EN");
+    const news = await prisma.news.create({
+      data: { title, content, titleEn, contentEn },
+    });
     res.status(201).json(news);
   })
 );
@@ -48,10 +55,22 @@ router.patch(
   "/:id",
   asyncHandler(async (req, res) => {
     const { title, content } = req.body;
+
+    const titleEn = title ? await translateText(title, "EN") : undefined;
+    const contentEn = content
+      ? await translateHtmlContent(content, "EN")
+      : undefined;
+
     const updated = await prisma.news.update({
       where: { id: Number(req.params.id) },
-      data: { title, content },
+      data: {
+        ...(title && { title }),
+        ...(content && { content }),
+        ...(titleEn && { titleEn }),
+        ...(contentEn && { contentEn }),
+      },
     });
+
     res.json(updated);
   })
 );

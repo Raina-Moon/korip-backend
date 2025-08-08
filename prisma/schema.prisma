@@ -219,17 +219,17 @@ model RoomInventory {
 }
 
 model RoomType {
-  id           Int     @id @default(autoincrement())
-  lodgeId      Int
-  name         String
-  nameEn       String?
-  description  String?
+  id            Int     @id @default(autoincrement())
+  lodgeId       Int
+  name          String
+  nameEn        String?
+  description   String?
   descriptionEn String?
-  basePrice    Int
-  weekendPrice Int?
-  maxAdults    Int
-  maxChildren  Int
-  totalRooms   Int
+  basePrice     Int
+  weekendPrice  Int?
+  maxAdults     Int
+  maxChildren   Int
+  totalRooms    Int
 
   lodge           HotSpringLodge    @relation(fields: [lodgeId], references: [id])
   reservations    Reservation[]
@@ -357,6 +357,8 @@ model News {
   id        Int      @id @default(autoincrement())
   title     String
   content   String
+  titleEn   String?
+  contentEn String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -365,6 +367,8 @@ model Event {
   id        Int      @id @default(autoincrement())
   title     String
   content   String
+  titleEn   String?
+  contentEn String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
