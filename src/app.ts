@@ -15,7 +15,7 @@ app.use(morgan("dev"));
 app.use(helmet());
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://13.125.143.116:3000"],
+    origin: ["https://korips.com"],
     credentials: true,
   })
 );
