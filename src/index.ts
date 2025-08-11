@@ -4,9 +4,9 @@ import "./jobs/ticket-cron";
 
 import app from "./app";
 
-const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  /* eslint-disable no-console */
-  console.log(`Listening: http://localhost:${port}`);
-  /* eslint-enable no-console */
+const port = Number(process.env.PORT) || 5001;
+const host = process.env.HOST || "0.0.0.0";
+
+app.listen(port, host, () => {
+  console.log(`Listening: http://${host}:${port}`); // 로그도 host 반영
 });
