@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { AuthRequest, authToken } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../utils/asyncHandler";
 import { detectLanguage, translateText } from "../utils/deepl";
+import { subHours } from "date-fns";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -66,10 +67,27 @@ router.get(
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    const now = new Date();
+    const kstNow = subHours(now, -9);
+    const kstEndOfToday = new Date(
+      kstNow.getFullYear(),
+      kstNow.getMonth(),
+      kstNow.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
+
     try {
       const [reviews, totalCount] = await Promise.all([
         prisma.ticketReview.findMany({
-          where: { userId },
+          where: {
+            userId,
+            reservation: {
+              date: { lte: kstEndOfToday },
+            },
+          },
           include: {
             ticketType: {
               select: {
@@ -97,14 +115,17 @@ router.get(
               },
             },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
+          orderBy: { createdAt: "desc" },
           skip: (page - 1) * pageSize,
           take: pageSize,
         }),
         prisma.ticketReview.count({
-          where: { userId },
+          where: {
+            userId,
+            reservation: {
+              date: { lte: kstEndOfToday },
+            },
+          },
         }),
       ]);
 
