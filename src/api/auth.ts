@@ -10,7 +10,6 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt";
 import { asyncHandler } from "../utils/asyncHandler";
-import { differenceInSeconds } from "date-fns";
 
 const router = express.Router();
 const prisma = new PrismaClient();
