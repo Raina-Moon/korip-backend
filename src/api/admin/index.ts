@@ -11,20 +11,22 @@ import ticketReportsRouter from "./ticket-reports";
 import ticketReservationRouter from "./ticketReservation";
 import eventsRouter from "./events";
 import newsRouter from "./news";
+import supportRouter from "./support";
 
 const router = express.Router();
 
-router.use("/",authToken, isAdmin);
+router.use("/", authToken, isAdmin);
 
 router.use("/user", userRouter);
 router.use("/lodge", lodgeRouter);
 router.use("/room-type", roomTypeRouter);
 router.use("/room-inventory", roomInventoryRouter);
-router.use("/reports",reportsRouter);
+router.use("/reports", reportsRouter);
 router.use("/reservation", reservationRouter);
 router.use("/ticket-reports", ticketReportsRouter);
 router.use("/ticket-reservation", ticketReservationRouter);
-router.use("/events", eventsRouter)
+router.use("/events", eventsRouter);
 router.use("/news", newsRouter);
+router.use("/support", supportRouter);
 
 export default router;
