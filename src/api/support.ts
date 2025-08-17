@@ -42,6 +42,7 @@ router.get(
         take: pageSize,
         select: {
           id: true,
+          name: true,
           question: true,
           answer: true,
           status: true,
