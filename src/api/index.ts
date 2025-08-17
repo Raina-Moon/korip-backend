@@ -18,6 +18,7 @@ import ticketReviewRouter from "./ticket-review";
 import reportTicketReviewRouter from "./report-ticket-review";
 import eventsRouter from "./events";
 import newsRouter from "./news";
+import supportRouter from "./support";
 
 const router = express.Router();
 
@@ -40,5 +41,6 @@ router.use("/ticket-review", ticketReviewRouter);
 router.use("/report-ticket-review", reportTicketReviewRouter);
 router.use("/events", eventsRouter);
 router.use("/news", newsRouter);
+router.use("/support", supportRouter);
 
 export default router;
