@@ -1,9 +1,9 @@
-import { Router } from "express";
+import express from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { authToken } from "../middlewares/authMiddleware";
 import { PrismaClient } from "@prisma/client";
 
-const router = Router();
+const router = express.Router();
 const prisma = new PrismaClient();
 
 router.post(
