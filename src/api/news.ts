@@ -39,4 +39,51 @@ router.get(
   })
 );
 
+router.get(
+  "/:id/adjacent",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+
+    const current = await prisma.news.findUnique({
+      where: { id },
+      select: { id: true, createdAt: true },
+    });
+    if (!current) return res.status(404).json({ message: "News not found" });
+
+    const prev = await prisma.news.findFirst({
+      where: {
+        OR: [
+          { createdAt: { gt: current.createdAt } },
+          { createdAt: current.createdAt, id: { gt: current.id } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        titleEn: true,
+        createdAt: true,
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+
+    const next = await prisma.news.findFirst({
+      where: {
+        OR: [
+          { createdAt: { lt: current.createdAt } },
+          { createdAt: current.createdAt, id: { lt: current.id } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        titleEn: true,
+        createdAt: true,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    });
+
+    res.json({ prev, next });
+  })
+);
+
 export default router;
