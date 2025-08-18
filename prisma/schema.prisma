@@ -376,15 +376,17 @@ model Event {
 }
 
 model Support {
-  id         Int          @id @default(autoincrement())
-  userId     Int
-  name       String
-  question   String
-  answer     String?
-  status     SupportStatus @default(PENDING)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  answeredAt DateTime?
+  id           Int           @id @default(autoincrement())
+  userId       Int
+  name         String
+  question     String
+  questionKo   String?
+  originalLang String?
+  answer       String?
+  status       SupportStatus @default(PENDING)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  answeredAt   DateTime?
 
   user User @relation(fields: [userId], references: [id])
 }
