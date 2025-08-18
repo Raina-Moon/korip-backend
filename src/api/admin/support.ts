@@ -1,6 +1,7 @@
 import express from "express";
 import { PrismaClient, SupportStatus } from "@prisma/client";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { translateText } from "../../utils/deepl";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -21,7 +22,10 @@ router.get(
           userId: true,
           name: true,
           question: true,
+          questionKo: true,
+          originalLang: true,
           answer: true,
+          answerEn: true,
           status: true,
           createdAt: true,
           updatedAt: true,
@@ -57,6 +61,12 @@ router.patch(
       return res.status(400).json({ message: "Invalid status" });
     }
 
+    const existing = await prisma.support.findUnique({
+      where: { id },
+      select: { id: true, originalLang: true },
+    });
+    if (!existing) return res.status(404).json({ message: "Not found" });
+
     const data: Record<string, any> = {};
 
     if (answer !== undefined) {
@@ -65,6 +75,15 @@ router.patch(
         data.status = "ANSWERED";
       }
       data.answeredAt = answer ? new Date() : null;
+      if (answer && existing.originalLang === "EN") {
+        try {
+          data.answerEn = await translateText(answer, "EN");
+        } catch (e) {
+          data.answerEn = null;
+        }
+      } else if (answer && existing.originalLang === "KO") {
+        data.answerEn = null;
+      }
     }
 
     if (status !== undefined) {
@@ -82,7 +101,10 @@ router.patch(
         userId: true,
         name: true,
         question: true,
+        questionKo: true,
+        originalLang: true,
         answer: true,
+        answerEn: true,
         status: true,
         createdAt: true,
         updatedAt: true,
