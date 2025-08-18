@@ -26,6 +26,13 @@ router.get(
           createdAt: true,
           updatedAt: true,
           answeredAt: true,
+          user: {
+            select: {
+              id: true,
+              nickname: true,
+              email: true,
+            },
+          },
         },
       }),
       prisma.support.count(),
@@ -80,6 +87,13 @@ router.patch(
         createdAt: true,
         updatedAt: true,
         answeredAt: true,
+        user: {
+          select: {
+            id: true,
+            nickname: true,
+            email: true,
+          },
+        },
       },
     });
     res.json(updated);
