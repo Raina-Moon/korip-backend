@@ -383,6 +383,7 @@ model Support {
   questionKo   String?
   originalLang String?
   answer       String?
+  answerEn     String?
   status       SupportStatus @default(PENDING)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
